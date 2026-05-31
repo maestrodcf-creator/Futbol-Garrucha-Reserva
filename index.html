@@ -2446,13 +2446,38 @@ function startTimerTick(){
   },30000);
 }
 function waUrlConv(c){
-  const tit=getConvTit(c),MT=c.MT||(c.tipo==='sala'?12:16),url=location.href.split('?')[0];
+  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:16),url=location.href.split('?')[0];
+  const plazasLibres=MT-tit.length;
+
+  // Build inscritos list
+  let listaInscritos='';
+  if(tit.length){
+    listaInscritos+='\nAPUNTADOS ('+tit.length+'/'+MT+'):\n';
+    tit.forEach((p,i)=>{
+      const pos=posLabels&&posLabels[p.pos]?posLabels[p.pos]:'';
+      listaInscritos+=(i+1)+'. '+p.name+(pos?' ('+pos+')':'')+'\n';
+    });
+  }
+  if(sup.length){
+    listaInscritos+='\nSUPLENTES:\n';
+    sup.forEach((p,i)=>{
+      listaInscritos+='S'+(i+1)+'. '+p.name+'\n';
+    });
+  }
+  if(plazasLibres>0){
+    listaInscritos+='\nQuedan '+plazasLibres+' plaza'+(plazasLibres!==1?'s':'')+' libres!\n';
+  }else{
+    listaInscritos+='\nConvocatoria completa!\n';
+  }
+
   return 'https://wa.me/?text='+encodeURIComponent(
-    'CONVOCATORIA PENA GARRUCHA\n'+c.dia+(c.diames?' '+c.diames+'.':'')+' a las '+c.hora+'\n'+c.lugar+'\n'+
+    'CONVOCATORIA PENA GARRUCHA\n'+
+    c.dia+(c.diames?' '+c.diames+'.':'')+' a las '+c.hora+'\n'+
+    c.lugar+'\n'+
     (c.coste?c.coste+'eur/jug. - '+(c.pagar||'')+'\n':'')+
     (c.notas?c.notas+'\n':'')+
-    '\nPlazas libres: '+(MT-tit.length)+' de '+MT+'\n'+
-    (c.cierreAt?'Cierre: '+new Date(c.cierreAt).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n':'')+
+    (c.cierreAt?'Inscripciones hasta: '+new Date(c.cierreAt).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'\n':'')+
+    listaInscritos+
     '\n'+url
   );
 }
