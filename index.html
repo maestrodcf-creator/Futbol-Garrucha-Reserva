@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
 /* Badges */
 .badge{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:700;letter-spacing:.03em}
-.btit{background:var(--offwhite);color:var(--pitch-mid)}
+.btit{background:rgba(34,136,61,.12);color:var(--grass)}
 .bsup{background:var(--amber-l);color:var(--amber)}
 .btv{background:var(--blue-l);color:var(--blue)}
 .bcanc{background:var(--red-l);color:var(--red)}
@@ -381,17 +381,17 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 .tipo-card{flex:1;padding:12px 8px;border:1.5px solid var(--border);border-radius:var(--r-sm);text-align:center;cursor:pointer;background:var(--offwhite);transition:all .15s}
 .tipo-card.sel{border-color:var(--grass);background:rgba(34,136,61,.07)}
 .tipo-card i{color:var(--muted)}.tipo-card.sel i{color:var(--grass)}
-.org-conv-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.org-conv-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
 .org-conv-header{background:var(--pitch);padding:12px 14px;display:flex;align-items:center;gap:12px}
 .org-btn-row{display:flex;gap:6px;flex-wrap:wrap}
-.org-action-btn{border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 11px;font-size:11px;font-weight:600;color:var(--dark);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:background .12s}
+.org-action-btn{border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 11px;font-size:11px;color:var(--dark);font-weight:600;color:var(--dark);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;transition:background .12s}
 .org-action-btn:hover{background:var(--offwhite)}
 .org-action-btn.green{border-color:var(--grass);color:var(--grass);background:rgba(34,136,61,.06)}
 .org-action-btn.red{border-color:var(--red);color:var(--red);background:rgba(192,57,43,.06)}
 .score-big{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:1;min-width:48px;text-align:center;color:var(--dark)}
-.score-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border2);background:none;cursor:pointer;font-size:20px;font-weight:700;color:var(--dark);display:flex;align-items:center;justify-content:center;transition:background .12s}
+.score-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border2);background:var(--card);cursor:pointer;font-size:20px;font-weight:700;color:var(--dark);display:flex;align-items:center;justify-content:center;transition:background .12s}
 .score-btn:hover{background:var(--offwhite)}
-.stat-input{width:100%;padding:7px 4px;border:1.5px solid var(--border2);border-radius:var(--r-sm);background:var(--offwhite);color:var(--dark);font-size:18px;font-weight:700;text-align:center;font-family:'DM Sans',sans-serif}
+.stat-input{width:100%;padding:7px 4px;border:1.5px solid var(--border2);border-radius:var(--r-sm);background:var(--card);color:var(--dark);font-size:18px;font-weight:700;text-align:center;font-family:'DM Sans',sans-serif}
 .stat-lbl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;text-align:center}
 @media(max-width:900px){#org-grid{grid-template-columns:1fr !important}}
 @media(max-width:767px){#org-unlocked-view{padding-bottom:80px}}
@@ -738,6 +738,12 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   </div><!-- /unlocked -->
 </div>
 
+
+    <div id="sc-lista" class="screen">
+      <div class="sec-pad" style="padding-top:16px">
+        <div id="lista-content"></div>
+      </div>
+    </div>
   </div><!-- /content -->
 </div><!-- /main -->
 </div><!-- /layout -->
@@ -1194,14 +1200,14 @@ function renderCampo(){
     const tc=isGK?'#0d1f3c':'#0d4a1f';
     return'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'+
       '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';color:'+tc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,.3)">'+initials(p.name)+'</div>'+
-      '<div style="font-size:9px;font-weight:600;color:rgba(255,255,255,.85);text-align:center;max-width:40px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name.split(' ')[0]+'</div>'+
+      '<div style="font-size:9px;font-weight:700;color:var(--lime);text-align:center;max-width:44px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name.split(' ')[0]+'</div>'+
     '</div>';
   }
   function emptyToken(){
     return'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'+
       '<div style="width:34px;height:34px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center">'+
         '<i class="ti ti-user" style="font-size:13px;color:rgba(255,255,255,.15)"></i></div>'+
-      '<div style="font-size:9px;color:rgba(255,255,255,.15)">libre</div>'+
+      '<div style="font-size:9px;color:rgba(184,246,58,.25)">libre</div>'+
     '</div>';
   }
 
@@ -1335,13 +1341,16 @@ function renderCalendar(){
     const [y,m,d]=k.split('-');
     const dayName=DIAS_ES[new Date(y,m-1,d).getDay()];
     return calEvents[k].map(ev=>`
-      <div class="cal-ev-item" style="cursor:pointer" onclick="openCalEvent('${k}')">
-        <div class="cal-ev-icon"><i class="ti ti-ball-football"></i></div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${dayName} ${d}/${m}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${ev.hora} · ${ev.label} · ${ev.lugar||'—'}</div>
+      <div class="cal-ev-item" style="cursor:pointer" onclick="openCalEvent('${k}')" >
+        <div class="cal-ev-icon" style="background:${ev.status==='cerrada'?'rgba(192,57,43,.12)':'rgba(34,136,61,.12)'}">
+          <i class="ti ti-ball-football" style="color:${ev.status==='cerrada'?'var(--red)':'var(--grass)'}"></i>
         </div>
-        <span class="badge btit">${ev.tipo==='sala'?'Sala':'Fútbol 7'}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:var(--dark)">${dayName} ${d}/${m} · ${ev.hora}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${ev.label} · ${ev.lugar||'—'}</div>
+          ${ev.inscritos!==undefined?`<div style="font-size:11px;color:var(--grass);margin-top:2px;font-weight:600">${ev.inscritos}/${ev.MT||12} apuntados</div>`:''}
+        </div>
+        <span class="badge ${ev.status==='cerrada'?'bsup':'btit'}">${ev.status==='cerrada'?'Cerrada':'Abierta'}</span>
       </div>`).join('');
   }).join('');
 }
@@ -1693,6 +1702,7 @@ function patchShowScreen(){
     orig(id,btn);
     if(id==='org'&&pinUnlocked)renderOrgPanel();
     if(id==='campo')renderCampo();
+    if(id==='lista'){/* lista rendered by verListaConv */}
     if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
     if(id==='hist')renderHistorialEnhanced();
     if(id==='inicio')renderInicioMulti();
@@ -1730,7 +1740,7 @@ function crearNuevaConv(){
   convocatorias.push({id,tipo,dia,diames,hora,lugar:lugar.trim(),maps:maps.trim(),coste,pagar:pagar.trim(),notas:notas.trim(),cierreAt,status:'abierta',MT,players:[],talvez:[],teamA:[],teamB:[],asistencia:{},createdAt:new Date().toISOString()});
   ['new-lugar','new-maps','new-coste','new-pagar','new-notas','new-diames','new-cierre-fecha'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   const ch2=document.getElementById('new-cierre-hora');if(ch2)ch2.value='20:00';
-  saveCloud();renderOrgPanel();renderInicioMulti();populateDL();
+  syncCalFromConvs();saveCloud();renderOrgPanel();renderInicioMulti();renderCalendar();populateDL();
   showToast('Convocatoria creada');
 }
 
@@ -1841,95 +1851,108 @@ function salirDeConv(cid){
 }
 function verListaConv(cid){
   const c=convocatorias.find(x=>x.id===cid);if(!c)return;
-  // Sync legacy vars so v6's sc-conv renders
-  convocatoria=c;MAX_T=c.MT||(c.tipo==='sala'?12:16);
-  players.length=0;(c.players||[]).forEach(p=>players.push(p));
-  talvez.length=0;(c.talvez||[]).forEach(p=>talvez.push(p));
-  cerrado=c.status==='cerrada';
-
-  // Navigate to conv screen
-  const btn=document.querySelector('[data-screen="conv"]');
-  showScreen('conv',btn);
-
-  // Re-render conv screen with full list
-  const tit=players.filter(p=>p.rol==='tit');
-  const sup=players.filter(p=>p.rol==='sup');
-  const MT=MAX_T;
+  const tit=getConvTit(c);
+  const sup=getConvSup(c);
+  const tv=getConvTV(c);
+  const MT=c.MT||(c.tipo==='sala'?12:16);
   const pct=Math.round(tit.length/MT*100);
-  const pc=pct>=90?'var(--red)':pct>=60?'#d4870a':'var(--grass)';
+  const pc=pct>=90?'var(--red)':pct>=60?'var(--amber)':'var(--grass)';
 
-  // Inject rich list into sc-conv
-  const sp=document.querySelector('#sc-conv .sec-pad');
-  if(!sp)return;
+  const el=document.getElementById('lista-content');
+  if(!el)return;
 
-  // Find or create our custom list block
-  let customBlock=document.getElementById('conv-custom-block');
-  if(!customBlock){
-    customBlock=document.createElement('div');
-    customBlock.id='conv-custom-block';
-    customBlock.style.marginTop='14px';
-    sp.appendChild(customBlock);
+  // Player row — uses only theme CSS variables
+  function pRow(p,num,accentColor){
+    const hasDor=p.dor&&p.dor!=='—'&&p.dor!=='';
+    const pos=posLabels&&posLabels[p.pos]?posLabels[p.pos]:(p.pos||'Jugador');
+    return '<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border)">'+
+      // Number
+      '<span style="width:20px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:'+accentColor+';flex-shrink:0;line-height:1">'+num+'</span>'+
+      // Avatar
+      '<div style="width:40px;height:40px;border-radius:50%;background:'+accentColor+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:.02em">'+initials(p.name)+'</div>'+
+      // Name + details
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:700;font-size:14px;color:var(--dark);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px">'+
+          (hasDor?'<span style="font-weight:700;color:var(--dark)">#'+p.dor+'</span><span style="color:var(--border2)">·</span>':'')+
+          '<span>'+pos+'</span>'+
+        '</div>'+
+      '</div>'+
+      // Time
+      (p.time?'<span style="font-size:10px;color:var(--muted);flex-shrink:0;font-weight:600">'+p.time+'</span>':'')+
+    '</div>';
   }
 
-  customBlock.innerHTML=
-    // Conv header info
-    '<div class="card" style="margin-bottom:12px">'+
-      '<div style="background:var(--pitch);padding:12px 14px;display:flex;align-items:center;justify-content:space-between">'+
+  function section(title,icon,items,color,emptyMsg){
+    if(!items.length&&emptyMsg){
+      return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:8px;margin-top:14px;display:flex;align-items:center;gap:6px">'+
+        '<i class="ti ti-'+icon+'" style="font-size:13px"></i>'+title+'</div>'+
+        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:20px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px">'+emptyMsg+'</div>';
+    }
+    if(!items.length)return '';
+    return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:8px;margin-top:14px;display:flex;align-items:center;gap:6px">'+
+      '<i class="ti ti-'+icon+'" style="font-size:13px"></i>'+title+'</div>'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px">'+
+      items.join('')+
+      '</div>';
+  }
+
+  const titRows=tit.map((p,i)=>pRow(p,i+1,'var(--grass)'));
+  const supRows=sup.map((p,i)=>pRow(p,'S'+(i+1),'var(--amber)'));
+  const tvRows=tv.map((p,i)=>pRow(p,i+1,'var(--blue)'));
+
+  el.innerHTML=
+    // Back
+    '<button onclick="showScreen(\'inicio\',document.querySelector(\'[data-screen=inicio]\'))" '+
+      'style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:\'DM Sans\',sans-serif">'+
+      '<i class="ti ti-arrow-left" style="font-size:16px"></i> Volver'+
+    '</button>'+
+
+    // Hero — uses pitch (dark green) bg which is fine for both modes
+    '<div style="background:var(--pitch);border-radius:var(--r-sm);padding:18px;margin-bottom:4px">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px">'+
         '<div>'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--lime);letter-spacing:.04em">'+(c.tipo==='sala'?'Futbol Sala':'Futbol 7')+'</div>'+
-          '<div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:1px">'+c.dia+(c.diames?' '+c.diames+'.':'')+' &middot; '+c.hora+' &middot; '+c.lugar+'</div>'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--lime);letter-spacing:.05em;line-height:1">'+
+            (c.tipo==='sala'?'Futbol Sala':'Futbol 7')+
+          '</div>'+
+          '<div style="font-size:14px;color:rgba(255,255,255,.85);font-weight:600;margin-top:5px">'+
+            c.dia+(c.diames?' '+c.diames+'.':'')+' &middot; '+c.hora+
+          '</div>'+
+          '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">'+c.lugar+'</div>'+
+          (c.coste?'<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:5px">'+c.coste+'&euro;/jug.'+(c.pagar?' &middot; '+c.pagar:'')+'</div>':'')+
+          (c.notas?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">'+c.notas+'</div>':'')+
         '</div>'+
-        '<span class="pill '+(c.status==='cerrada'?'pill-closed':'pill-open')+'">'+(c.status==='cerrada'?'Cerrada':'Abierta')+'</span>'+
+        '<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:5px 11px;border-radius:99px;letter-spacing:.04em;flex-shrink:0;'+(c.status==='cerrada'?'background:rgba(192,57,43,.3);color:#f08080':'background:rgba(184,246,58,.15);color:var(--lime)')+'">'+
+          (c.status==='cerrada'?'Cerrada':'Abierta')+
+        '</span>'+
       '</div>'+
-      (c.coste?'<div style="padding:8px 14px;font-size:12px;color:var(--muted)"><i class="ti ti-coin-euro"></i> '+c.coste+'&euro;/jug. &middot; <i class="ti ti-user-dollar"></i> '+(c.pagar||'&mdash;')+'</div>':'')+
-      (c.notas?'<div style="padding:4px 14px 10px;font-size:11px;color:var(--muted)"><i class="ti ti-note"></i> '+c.notas+'</div>':'')+
+      // Progress bar
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(184,246,58,.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">'+
+        '<span>'+tit.length+' / '+MT+' titulares</span>'+
+        '<span>'+sup.length+' / 2 suplentes</span>'+
+      '</div>'+
+      '<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.12)">'+
+        '<div style="height:100%;border-radius:99px;background:'+pc+';width:'+pct+'%;transition:width .4s"></div>'+
+      '</div>'+
     '</div>'+
 
-    // Titulares
-    '<div class="stitle" style="margin-bottom:8px">Titulares ('+tit.length+'/'+MT+')</div>'+
-    '<div class="card" style="margin-bottom:12px">'+
-      (tit.length?tit.map((p,i)=>
-        '<div class="prow" style="padding:9px 13px">'+
-          '<div style="width:22px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-right:4px">'+(i+1)+'</div>'+
-          '<div class="avatar av-tit">'+initials(p.name)+'</div>'+
-          '<span class="pname" style="flex:1">'+p.name+'</span>'+
-          '<span class="badge btit">'+(posLabels&&posLabels[p.pos]||p.pos||'')+'</span>'+
-          (p.time?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+p.time+'</span>':'')+
-        '</div>'
-      ).join(''):
-      '<div class="empty-st" style="padding:16px"><p>Nadie apuntado aun</p></div>')+
-    '</div>'+
+    // APUNTARME
+    (c.status==='abierta'&&!(_myName&&c.players&&c.players.find(p=>p.name===_myName))?
+      '<button data-cid="'+c.id+'" onclick="abrirInscMulti(this.dataset.cid)" '+
+        'style="width:100%;padding:14px;border:none;border-radius:var(--r-sm);background:var(--grass);color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;margin:12px 0">'+
+        '<i class="ti ti-user-plus" style="font-size:18px"></i> Apuntarme</button>':'<div style="margin-top:4px"></div>') +
 
-    // Suplentes
-    (sup.length?
-      '<div class="stitle" style="margin-bottom:8px">Suplentes ('+sup.length+'/2)</div>'+
-      '<div class="card" style="margin-bottom:12px">'+
-        sup.map((p,i)=>
-          '<div class="prow" style="padding:9px 13px">'+
-            '<div style="width:22px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-right:4px">S'+(i+1)+'</div>'+
-            '<div class="avatar av-sup">'+initials(p.name)+'</div>'+
-            '<span class="pname" style="flex:1">'+p.name+'</span>'+
-            '<span class="badge bsup">Suplente</span>'+
-          '</div>'
-        ).join('')+
-      '</div>':'') +
+    // Sections
+    section('Titulares ('+tit.length+'/'+MT+')','users',titRows,'var(--grass)','Nadie apuntado aun')+
+    section('Suplentes ('+sup.length+'/2)','user-plus',supRows,'var(--amber)','')+
+    section('Tal vez ('+tv.length+')','question-mark',tvRows,'var(--blue)','')+
 
-    // Tal vez
-    (talvez.length?
-      '<div class="stitle" style="margin-bottom:8px">Tal vez ('+talvez.length+')</div>'+
-      '<div class="card" style="margin-bottom:12px">'+
-        talvez.map(p=>
-          '<div class="prow" style="padding:9px 13px">'+
-            '<div class="avatar av-tv">'+initials(p.name)+'</div>'+
-            '<span class="pname" style="flex:1">'+p.name+'</span>'+
-            '<span class="badge btv">Tal vez</span>'+
-          '</div>'
-        ).join('')+
-      '</div>':'') +
+    // Back bottom
+    '<button onclick="showScreen(\'inicio\',document.querySelector(\'[data-screen=inicio]\'))" '+
+      'style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:1px solid var(--border2);border-radius:var(--r-sm);background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);font-family:\'DM Sans\',sans-serif;margin-top:4px">'+
+      '<i class="ti ti-arrow-left" style="font-size:14px"></i> Volver al inicio</button>';
 
-    // Back button
-    '<button class="btn-outline" onclick="showScreen(\'inicio\',document.querySelector(\'[data-screen=inicio]\'))">'+
-      '<i class="ti ti-arrow-left"></i> Volver al inicio</button>';
+  showScreen('lista', null);
 }
 
 /* ===== ORG PANEL ===== */
@@ -2086,6 +2109,8 @@ function renderOrgPanel(){
   }).join('');
   renderOrgJug();
   renderPlantillas();
+  syncCalFromConvs();
+  if(typeof renderCalendar==='function')renderCalendar();
 }
 
 /* ===== ORG ACTIONS ===== */
@@ -2206,7 +2231,7 @@ function renderOrgJug(){
       '<button onclick="orgBorrarTodosJugadores()" style="border:1px solid var(--red);background:rgba(192,57,43,.06);border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--red);display:inline-flex;align-items:center;gap:4px">'+
         '<i class="ti ti-trash"></i> Borrar todos</button>'+
     '</div>'+
-    '<div class="card" style="padding:0">'+
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">'+
       Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0)).map(j=>
         '<div class="prow" style="padding:9px 13px">'+
           '<label style="display:flex;align-items:center;cursor:pointer;margin-right:8px">'+
@@ -2448,6 +2473,56 @@ function patchConfirmarInsc(){
 }
 
 
+
+function syncCalFromConvs(){
+  // Rebuild calEvents from live convocatorias array
+  // We only add entries for convocatorias that don't already have one
+  convocatorias.forEach(c=>{
+    if(!c.dia||!c.hora)return;
+    const diaIdx=DIAS_ES.indexOf(c.dia);
+    if(diaIdx<0)return;
+    // Calculate the date for this weekday
+    const base=new Date();
+    let offset=(diaIdx-base.getDay()+7)%7;
+    const d=new Date(base);d.setDate(d.getDate()+offset);
+    // If diames is set, try to find the matching date this or next month
+    if(c.diames){
+      const dm=parseInt(c.diames);
+      if(!isNaN(dm)){
+        const now=new Date();
+        // Try current month first
+        const tryDate=new Date(now.getFullYear(),now.getMonth(),dm);
+        if(tryDate>=now)d.setTime(tryDate.getTime());
+        else{
+          // Try next month
+          const tryNext=new Date(now.getFullYear(),now.getMonth()+1,dm);
+          d.setTime(tryNext.getTime());
+        }
+      }
+    }
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(!calEvents[key])calEvents[key]=[];
+    // Check not already added (avoid duplicates)
+    const exists=calEvents[key].find(ev=>ev.convId===c.id);
+    if(!exists){
+      calEvents[key].push({
+        label:c.tipo==='sala'?'Futbol Sala':'Futbol 7',
+        hora:c.hora,
+        tipo:c.tipo,
+        lugar:c.lugar,
+        convId:c.id,
+        status:c.status,
+        inscritos:(c.players||[]).filter(p=>p.rol==='tit').length,
+        MT:c.MT||(c.tipo==='sala'?12:16)
+      });
+    }else{
+      // Update status and inscritos
+      exists.status=c.status;
+      exists.inscritos=(c.players||[]).filter(p=>p.rol==='tit').length;
+    }
+  });
+}
+
 /* ===== PLANTILLAS ===== */
 
 function guardarPlantilla(){
@@ -2504,7 +2579,7 @@ function renderPlantillas(){
     '<div class="sec-label" style="margin-bottom:8px"><i class="ti ti-bookmark"></i> Plantillas guardadas</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px">'+
     plantillas.map(p=>
-      '<div style="background:var(--white,#fff);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;display:flex;align-items:center;gap:10px">'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;display:flex;align-items:center;gap:10px">'+
         '<div style="flex:1">'+
           '<div style="font-weight:700;font-size:13px">'+p.nombre+'</div>'+
           '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(p.tipo==='sala'?'Sala':'F7')+' &middot; '+p.dia+' '+p.hora+' &middot; '+p.lugar+'</div>'+
@@ -2581,6 +2656,7 @@ window.addEventListener('load',function(){
   patchShowScreen();
   patchConfirmarInsc();
   loadCloud().then(function(){
+    syncCalFromConvs();
     renderInicioMulti();
     renderJugadoresEnhanced();
     renderHistorialEnhanced();
@@ -2684,4 +2760,5 @@ window.addEventListener('load',function(){
 </div>
 
 </body>
+
 </html>
