@@ -433,6 +433,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <button class="snb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i> Calendario</button>
     <button class="snb" data-screen="jugadores" onclick="showScreen('jugadores',this)"><i class="ti ti-users"></i> Jugadores</button>
     <button class="snb" data-screen="hist" onclick="showScreen('hist',this)"><i class="ti ti-history"></i> Historial</button>
+    <button class="snb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i> Temporada</button>
     <button class="snb" data-screen="org" id="snb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i> Organizador</button>
   </div>
   <div class="sidebar-conv-info" id="sidebar-conv-info">
@@ -629,9 +630,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         </div>
         <div style="font-weight:700;font-size:14px">Sesión activa</div>
       </div>
-      <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px">
-        <i class="ti ti-lock" style="font-size:13px"></i> Bloquear
-      </button>
+      <div style="display:flex;gap:8px">
+        <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-keypad" style="font-size:13px"></i> Cambiar PIN</button>
+        <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-lock" style="font-size:13px"></i> Bloquear</button>
+      </div>
     </div>
 
     <!-- LAYOUT: left + right -->
@@ -746,9 +748,21 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 </div>
 
 
+    <div id="sc-dashboard" class="screen">
+      <div class="sec-pad" style="padding-top:16px">
+        <div id="dashboard-content"></div>
+      </div>
+    </div>
+
     <div id="sc-lista" class="screen">
       <div class="sec-pad" style="padding-top:16px">
         <div id="lista-content"></div>
+      </div>
+    </div>
+
+    <div id="sc-perfil" class="screen">
+      <div class="sec-pad" style="padding-top:16px">
+        <div id="perfil-content"></div>
       </div>
     </div>
   </div><!-- /content -->
@@ -762,6 +776,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   
   <button class="nb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i><span>Cal.</span></button>
   <button class="nb" data-screen="jugadores" onclick="showScreen('jugadores',this)"><i class="ti ti-users"></i><span>Jugadores</span></button>
+  <button class="nb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i><span>Temp.</span></button>
   <button class="nb" data-screen="org" id="nb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i><span>Org.</span></button>
 </nav>
 
@@ -773,6 +788,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <div class="modal-handle"></div>
     <h2>Apuntarse</h2>
     <p class="msub" id="minsc-sub">Conv. del martes · 21:00</p>
+    <div id="not-me-hint" style="display:none;align-items:center;gap:8px;background:rgba(34,136,61,.07);border:1px solid rgba(34,136,61,.15);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:10px"></div>
     <div class="fl">Nombre *</div>
     <input class="fi" type="text" id="inp-name" placeholder="¿Cómo te llaman?">
     <div class="fl">Posición preferida</div>
@@ -1539,8 +1555,8 @@ function renderHistorial(){
 /* ═══════════════════════
    UI HELPERS
 ═══════════════════════ */
-const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Campo',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador'};
-const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Posiciones en el campo',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',org:'Panel de control'};
+const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Campo',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada'};
+const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Posiciones en el campo',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control'};
 
 function showScreen(id,btn){
   if(btn&&btn.disabled)return;
@@ -1619,18 +1635,20 @@ async function saveCloud(){
     sbSave('historial',historial),
     sbSave('plantillas',plantillas),
     sbSave('pagos',pagos),
+    sbSave('pin',PIN),
   ]);
 }
 async function loadCloud(){
-  const [convs,jug,hist,plts,pgs]=await Promise.all([
+  const [convs,jug,hist,plts,pgs,savedPin]=await Promise.all([
     sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
-    sbLoad('plantillas'),sbLoad('pagos'),
+    sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),
   ]);
   if(convs){convocatorias=convs;}
   if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
   if(hist){historial.length=0;hist.forEach(h=>historial.push(h));}
   if(plts){plantillas=plts;}
   if(pgs){Object.keys(pagos).forEach(k=>delete pagos[k]);Object.assign(pagos,pgs);}
+  if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
 }
 function startRealtime(){
   sb.channel('pg').on('postgres_changes',{event:'*',schema:'public',table:'app_data'},p=>{
@@ -1642,7 +1660,7 @@ function startRealtime(){
 }
 
 /* ===== PIN ===== */
-const PIN='3333';
+let PIN='3333';
 let pinVal='',pinUnlocked=false;
 function openPinOverlay(){
   pinVal='';updatePinDots();
@@ -1710,8 +1728,10 @@ function patchShowScreen(){
     if(id==='org'&&pinUnlocked)renderOrgPanel();
     if(id==='campo')renderCampo();
     if(id==='lista'){/* lista rendered by verListaConv */}
+    if(id==='perfil'){/* perfil rendered by abrirPerfil */}
     if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
     if(id==='hist')renderHistorialEnhanced();
+    if(id==='dashboard')renderDashboard();
     if(id==='inicio')renderInicioMulti();
   };
 }
@@ -1758,9 +1778,28 @@ function getConvTV(c){return c.talvez||[];}
 
 /* ===== INICIO MULTI ===== */
 let _myName='';
+try{_myName=localStorage.getItem('pg_myname')||'';}catch(e){}
 function renderInicioMulti(){
   const el=document.getElementById('conv-list');
   if(!el)return;
+  // Show welcome bar if name is known
+  let welcomeBar=document.getElementById('welcome-bar');
+  if(!welcomeBar){
+    welcomeBar=document.createElement('div');
+    welcomeBar.id='welcome-bar';
+    el.parentNode.insertBefore(welcomeBar,el);
+  }
+  if(_myName){
+    welcomeBar.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px">'+
+        '<div style="width:34px;height:34px;border-radius:50%;background:var(--pitch);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--lime);flex-shrink:0">'+ini2(_myName)+'</div>'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:13px;color:var(--dark)">Hola, '+_myName+'</div>'+
+          '<div style="font-size:11px;color:var(--muted)">Tu nombre esta guardado en este dispositivo</div></div>'+
+        '<button onclick="clearMyName();renderInicioMulti()" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);text-decoration:underline;padding:0;flex-shrink:0">Cambiar</button>'+
+      '</div>';
+  }else{
+    welcomeBar.innerHTML='';
+  }
   const activas=convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada');
   if(!activas.length){
     el.innerHTML='<div class="empty-st" style="padding:48px 0"><i class="ti ti-whistle" style="font-size:32px"></i><strong>Sin convocatorias activas</strong><p>El organizador las creara desde el panel privado.</p></div>';
@@ -1811,12 +1850,45 @@ let _inscConvId=null;
 function abrirInscMulti(cid){
   const c=convocatorias.find(x=>x.id===cid);
   if(!c||c.status==='cerrada'){showToast('Inscripcion cerrada');return;}
+  // Block if already signed up from this device
+  if(_myName&&c.players&&c.players.find(p=>p.name===_myName)){
+    showToast('Ya estas apuntado a esta convocatoria');return;
+  }
   _inscConvId=cid;
   const sub=document.getElementById('minsc-sub');
-  if(sub)sub.textContent=(c.tipo==='sala'?'Sala':'F7')+' \u2014 '+c.dia+(c.diames?' '+c.diames+'.':'')+' '+c.hora;
+  if(sub)sub.textContent=(c.tipo==='sala'?'Sala':'F7')+' — '+c.dia+(c.diames?' '+c.diames+'.':'')+' '+c.hora;
+  // Pre-fill saved name
+  const nameEl=document.getElementById('inp-name');
+  if(nameEl&&_myName)nameEl.value=_myName;
+  // Update "no soy yo" hint
+  updateNotMeHint();
   openModal('modal-insc');
-  setTimeout(()=>{const el=document.getElementById('inp-name');if(el)el.focus();},80);
+  setTimeout(()=>{if(nameEl&&!_myName)nameEl.focus();},80);
 }
+
+function updateNotMeHint(){
+  const hint=document.getElementById('not-me-hint');
+  if(!hint)return;
+  if(_myName){
+    hint.style.display='flex';
+    hint.innerHTML='<i class="ti ti-user-check" style="color:var(--grass);font-size:14px"></i>'+
+      '<span style="font-size:12px;color:var(--muted);flex:1">Hola, <strong style="color:var(--dark)">'+_myName+'</strong></span>'+
+      '<button onclick="clearMyName()" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);text-decoration:underline;padding:0">No soy yo</button>';
+  }else{
+    hint.style.display='none';
+  }
+}
+
+function clearMyName(){
+  _myName='';
+  try{localStorage.removeItem('pg_myname');}catch(e){}
+  const nameEl=document.getElementById('inp-name');
+  if(nameEl){nameEl.value='';nameEl.focus();}
+  updateNotMeHint();
+  renderInicioMulti();
+  showToast('Puedes introducir otro nombre');
+}
+
 function confirmarInscMulti(){
   const nameEl=document.getElementById('inp-name');
   const name=(nameEl||{}).value||'';
@@ -1828,6 +1900,7 @@ function confirmarInscMulti(){
     showToast('Ya hay 2 porteros. Elige otra posicion.');return;
   }
   _myName=name.trim();
+  try{localStorage.setItem('pg_myname',_myName);}catch(e){}
   if(selConf_==='tv'||selConf_==='tal_vez'){
     if(!c.talvez)c.talvez=[];
     c.talvez.push({name:_myName,pos:selPos_,rol:'tv'});
@@ -2182,7 +2255,17 @@ function orgGuardarResultado(cid){
     });
     if(p.pos)j.posiciones[p.pos]=(j.posiciones[p.pos]||0)+1;
   });
-  historial.push({...c,estado:'jugado',scoreA:sc.a,scoreB:sc.b,asistentes:tit.length,pagos:{...(pagos[cid]||{})},fecha:new Date().toLocaleDateString('es-ES')});
+  // Capture per-match stats before saving
+  const statsJugadores={};
+  tit.forEach(p=>{
+    const sid='sti_'+cid.replace(/\W/g,'_')+'_'+p.name.replace(/\W/g,'_');
+    const g=parseInt((document.getElementById(sid+'_goles')||{}).value||0);
+    const a=parseInt((document.getElementById(sid+'_asistencias')||{}).value||0);
+    const am=parseInt((document.getElementById(sid+'_amarillas')||{}).value||0);
+    const ro=parseInt((document.getElementById(sid+'_rojas')||{}).value||0);
+    if(g||a||am||ro)statsJugadores[p.name]={goles:g,asistencias:a,amarillas:am,rojas:ro};
+  });
+  historial.push({...c,estado:'jugado',scoreA:sc.a,scoreB:sc.b,asistentes:tit.length,pagos:{...(pagos[cid]||{})},statsJugadores,fecha:new Date().toLocaleDateString('es-ES')});
   delete pagos[cid];
   convocatorias=convocatorias.filter(x=>x.id!==cid);
   delete convScores[cid];
@@ -2329,7 +2412,7 @@ function renderJugadoresEnhanced(){
     const pp=Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1])[0];
     const racha=j.racha||0;
     const rh=racha>=2?'<span style="background:#FFF0DC;color:#C05E00;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+racha+' racha</span>':racha<=-2?'<span style="background:#E6F1FB;color:#0C447C;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+Math.abs(racha)+' der.</span>':'';
-    return '<div class="card" style="margin-bottom:10px">'+
+    return '<div class="card" style="margin-bottom:10px;cursor:pointer" data-jname="'+j.name.replace(/"/g,'&quot;')+'" onclick="abrirPerfil(this.dataset.jname)">'+
       '<div style="padding:12px 14px;display:flex;align-items:center;gap:11px">'+
         '<div style="width:42px;height:42px;border-radius:50%;background:'+jColor(j.name)+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">'+ini2(j.name)+'</div>'+
         '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+j.name+rh+'</div>'+
@@ -2402,26 +2485,166 @@ function resetHistorial(){
   historial.length=0;saveCloud();renderHistorialEnhanced();showToast('Historial borrado');
 }
 function renderHistorialEnhanced(){
-  if(typeof renderHistorial==='function')renderHistorial();
-  const sc=document.getElementById('sc-hist');if(!sc)return;
-  if(!document.getElementById('hist-reset-bar')){
+  const el=document.getElementById('hist-list');
+  const sc=document.getElementById('sc-hist');
+  const statsEl=document.getElementById('stats-sec');
+  if(!el)return;
+
+  if(!historial.length){
+    el.innerHTML='<div class="empty-st"><i class="ti ti-history"></i><p>Aun no hay partidos en el historial</p></div>';
+    if(statsEl)statsEl.style.display='none';
+    // Ensure reset bar exists
+    if(sc&&!document.getElementById('hist-reset-bar')){
+      const bar=document.createElement('div');bar.id='hist-reset-bar';
+      bar.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px';
+      bar.innerHTML='<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo</button>';
+      const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
+    }
+    return;
+  }
+
+  // Stats bar
+  if(statsEl){
+    statsEl.style.display='block';
+    const statJug=document.getElementById('stat-jug');
+    const statCanc=document.getElementById('stat-canc');
+    if(statJug)statJug.textContent=historial.filter(h=>h.estado==='jugado').length;
+    if(statCanc)statCanc.textContent=historial.filter(h=>h.estado==='cancelado').length;
+  }
+
+  // Reset bar
+  if(sc&&!document.getElementById('hist-reset-bar')){
     const bar=document.createElement('div');bar.id='hist-reset-bar';
     bar.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px';
     bar.innerHTML='<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo</button>';
     const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
   }
-  setTimeout(()=>{
-    const hl=document.getElementById('hist-list');if(!hl)return;
-    hl.querySelectorAll('.hist-card,.card-item').forEach((card,ri)=>{
-      if(!card.querySelector('.del-hist-btn')){
-        const btn=document.createElement('button');btn.className='del-hist-btn';
-        btn.style.cssText='border:none;background:none;cursor:pointer;color:var(--red);padding:4px 6px;font-size:14px;border-radius:6px;flex-shrink:0';
-        btn.innerHTML='<i class="ti ti-trash"></i>';
-        const idx=historial.length-1-ri;btn.onclick=()=>borrarEntradaHistorial(idx);
-        card.appendChild(btn);
-      }
-    });
-  },50);
+
+  el.innerHTML=historial.slice().reverse().map((h,ri)=>{
+    const idx=historial.length-1-ri;
+    const jugado=h.estado==='jugado';
+    const cancelado=h.estado==='cancelado';
+    const tit=(h.players||[]).filter(p=>p.rol==='tit');
+
+    // Score display
+    const scoreHtml=jugado&&(h.scoreA!==undefined)?
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;line-height:1;color:'+(h.scoreA>h.scoreB?'var(--grass)':h.scoreA<h.scoreB?'var(--red)':'var(--dark)')+'">'+h.scoreA+'</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--muted)">:</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;line-height:1;color:'+(h.scoreB>h.scoreA?'var(--grass)':h.scoreB<h.scoreA?'var(--red)':'var(--dark)')+'">'+h.scoreB+'</div>'+
+        '<span style="font-size:11px;font-weight:700;margin-left:4px;color:var(--muted)">'+(h.scoreA>h.scoreB?'A gana':h.scoreB>h.scoreA?'B gana':'Empate')+'</span>'+
+      '</div>':'';
+
+    // Goleadores
+    const goleadores=jugado?tit.filter(p=>{
+      const k=p.name.trim().toLowerCase();
+      return jugadores[k]&&jugadores[k].goles>0;
+    }):[];
+    // Get goals scored in this specific match from h.stats if stored, else show overall
+    // We use h.players stats if available
+    const statsEnPartido=h.statsJugadores||{};
+    const goleadoresPartido=jugado?tit.filter(p=>statsEnPartido[p.name]&&statsEnPartido[p.name].goles>0):[];
+    const asistPartido=jugado?tit.filter(p=>statsEnPartido[p.name]&&statsEnPartido[p.name].asistencias>0):[];
+
+    // Goleadores fallback: use players list names if no per-match stats
+    const titNames=tit.map(p=>p.name);
+
+    // Pagos
+    const pp=h.pagos||{};
+    const pagadosList=tit.filter(p=>pp[p.name]);
+    const noPagadosList=tit.filter(p=>pp[p.name]===false);
+    const hasPagos=pagadosList.length>0||noPagadosList.length>0;
+
+    // Teams
+    const eqA=(h.teamA||[]);
+    const eqB=(h.teamB||[]);
+
+    return '<div style="background:var(--card);border-radius:var(--r-md);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow)">'+
+
+      // Header stripe
+      '<div style="height:3px;background:'+(jugado?'linear-gradient(90deg,var(--grass),var(--lime))':'var(--red)')+'"></div>'+
+
+      // Main row
+      '<div style="padding:12px 14px 10px;display:flex;align-items:flex-start;gap:12px">'+
+
+        // Icon
+        '<div style="width:42px;height:42px;border-radius:var(--r-sm);background:'+(jugado?'rgba(34,136,61,.1)':'var(--red-l)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+          '<i class="ti ti-ball-football" style="font-size:20px;color:'+(jugado?'var(--grass)':'var(--red)')+'"></i>'+
+        '</div>'+
+
+        '<div style="flex:1;min-width:0">'+
+          // Title row
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">'+
+            '<div style="font-weight:700;font-size:14px;color:var(--dark)">'+(h.tipo==='sala'?'Futbol Sala':'Futbol 7')+' &middot; '+h.dia+'</div>'+
+            '<span class="badge '+(jugado?'btit':'bcanc')+'">'+(jugado?'Jugado':'Cancelado')+'</span>'+
+          '</div>'+
+          // Meta
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:'+(jugado?'8':'0')+'px">'+
+            (h.hora?h.hora+' &middot; ':'')+
+            (h.lugar||'')+
+            (h.fecha?' &middot; '+h.fecha:'')+
+          '</div>'+
+
+          // Score
+          (scoreHtml?scoreHtml:'')+
+
+          // Cancelled reason
+          (cancelado&&h.motivo?'<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note" style="font-size:11px"></i> '+h.motivo+'</div>':'')+
+
+        '</div>'+
+
+        // Delete btn
+        '<button data-idx="'+idx+'" onclick="borrarEntradaHistorial(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:14px;border-radius:6px;flex-shrink:0;margin-top:2px"><i class="ti ti-trash"></i></button>'+
+
+      '</div>'+
+
+      // Detail sections (only for jugado)
+      (jugado?(
+
+        // Players row
+        (tit.length?
+          '<div style="padding:0 14px 10px">'+
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px">Jugadores ('+tit.length+')</div>'+
+            '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
+              tit.map(p=>{
+                const k=p.name.trim().toLowerCase();
+                const sp=statsEnPartido[p.name];
+                const goles=sp?sp.goles:0;
+                const asist=sp?sp.asistencias:0;
+                const am=sp?sp.amarillas:0;
+                const ro=sp?sp.rojas:0;
+                const hasStat=goles>0||asist>0||am>0||ro>0;
+                return '<div style="display:inline-flex;align-items:center;gap:4px;background:var(--offwhite);border-radius:99px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--dark)">'+
+                  initials(p.name)+' '+p.name.split(' ')[0]+
+                  (goles>0?'<span style="color:var(--grass);margin-left:3px">'+goles+'⚽</span>':'')+
+                  (asist>0?'<span style="color:#0C447C;margin-left:2px">'+asist+'🅰️</span>':'')+
+                  (am>0?'<span style="color:#B8860B;margin-left:2px">'+am+'🟨</span>':'')+
+                  (ro>0?'<span style="color:var(--red);margin-left:2px">'+ro+'🟥</span>':'')+
+                '</div>';
+              }).join('')+
+            '</div>'+
+          '</div>':'') +
+
+        // Pagos section
+        (hasPagos?
+          '<div style="border-top:1px solid var(--border);padding:10px 14px">'+
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px">'+
+              'Pagos &middot; '+pagadosList.length+'/'+tit.length+' pagado'+(pagadosList.length!==1?'s':'')+
+            '</div>'+
+            '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
+              tit.map(p=>{
+                const paid=pp[p.name];
+                return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid '+(paid?'var(--grass)':paid===false?'var(--red)':'rgba(0,0,0,.1)')+';color:'+(paid?'var(--grass)':paid===false?'var(--red)':'var(--muted)')+'">'+
+                  '<i class="ti ti-'+(paid?'check':paid===false?'x':'minus')+'" style="font-size:10px"></i> '+p.name.split(' ')[0]+
+                '</span>';
+              }).join('')+
+            '</div>'+
+          '</div>':'')
+
+      ):'')+ // end jugado sections
+
+    '</div>'; // end card
+  }).join('');
 }
 
 /* ===== UTILS ===== */
@@ -2664,6 +2887,499 @@ function renderPagosHistorial(entrada){
   '</div>';
 }
 
+
+/* ===== CAMBIAR PIN ===== */
+let _pinCambioFase=0,_pinActualVal='',_pinNuevoVal='',_pinConfirmarVal='';
+
+function abrirCambiarPin(){
+  resetPinCambio();
+  openModal('modal-cambiar-pin');
+}
+function resetPinCambio(){
+  _pinCambioFase=0;_pinActualVal='';_pinNuevoVal='';_pinConfirmarVal='';
+  updatePinCambioDots();
+  const sub=document.getElementById('pin-cambio-sub');
+  if(sub)sub.textContent='Paso 1 de 3: introduce el codigo actual';
+  const err=document.getElementById('pin-cambio-err');
+  if(err)err.textContent='';
+}
+function updatePinCambioDots(){
+  const val=_pinCambioFase===0?_pinActualVal:_pinCambioFase===1?_pinNuevoVal:_pinConfirmarVal;
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('pcd'+i);
+    if(d)d.classList.toggle('filled',i<val.length);
+  }
+}
+function pinCambioKey(k){
+  const err=document.getElementById('pin-cambio-err');
+  const sub=document.getElementById('pin-cambio-sub');
+  if(err)err.textContent='';
+  if(_pinCambioFase===0){
+    if(_pinActualVal.length>=4)return;
+    _pinActualVal+=k;updatePinCambioDots();
+    if(_pinActualVal.length===4){
+      setTimeout(()=>{
+        if(_pinActualVal===PIN){
+          _pinCambioFase=1;_pinActualVal='';
+          if(sub)sub.textContent='Paso 2 de 3: introduce el nuevo codigo';
+          updatePinCambioDots();
+        }else{
+          if(err)err.textContent='Codigo incorrecto';
+          document.querySelectorAll('#pin-cambio-dots .pin-dot').forEach(d=>d.classList.add('error'));
+          setTimeout(()=>{
+            _pinActualVal='';
+            document.querySelectorAll('#pin-cambio-dots .pin-dot').forEach(d=>d.classList.remove('error','filled'));
+            updatePinCambioDots();
+          },700);
+        }
+      },120);
+    }
+  }else if(_pinCambioFase===1){
+    if(_pinNuevoVal.length>=4)return;
+    _pinNuevoVal+=k;updatePinCambioDots();
+    if(_pinNuevoVal.length===4){
+      setTimeout(()=>{
+        _pinCambioFase=2;
+        if(sub)sub.textContent='Paso 3 de 3: confirma el nuevo codigo';
+        updatePinCambioDots();
+      },120);
+    }
+  }else if(_pinCambioFase===2){
+    if(_pinConfirmarVal.length>=4)return;
+    _pinConfirmarVal+=k;updatePinCambioDots();
+    if(_pinConfirmarVal.length===4){
+      setTimeout(()=>{
+        if(_pinNuevoVal===_pinConfirmarVal){
+          PIN=_pinNuevoVal;
+          saveCloud();
+          closeModal('modal-cambiar-pin');
+          resetPinCambio();
+          showToast('PIN actualizado correctamente');
+        }else{
+          if(err)err.textContent='Los codigos no coinciden';
+          document.querySelectorAll('#pin-cambio-dots .pin-dot').forEach(d=>d.classList.add('error'));
+          setTimeout(()=>{
+            _pinNuevoVal='';_pinConfirmarVal='';_pinCambioFase=1;
+            if(sub)sub.textContent='Paso 2 de 3: introduce el nuevo codigo';
+            document.querySelectorAll('#pin-cambio-dots .pin-dot').forEach(d=>d.classList.remove('error','filled'));
+            updatePinCambioDots();
+          },700);
+        }
+      },120);
+    }
+  }
+}
+function pinCambioDel(){
+  if(_pinCambioFase===0&&_pinActualVal.length>0)_pinActualVal=_pinActualVal.slice(0,-1);
+  else if(_pinCambioFase===1&&_pinNuevoVal.length>0)_pinNuevoVal=_pinNuevoVal.slice(0,-1);
+  else if(_pinCambioFase===2&&_pinConfirmarVal.length>0)_pinConfirmarVal=_pinConfirmarVal.slice(0,-1);
+  updatePinCambioDots();
+}
+
+
+/* ===== PERFIL DE JUGADOR ===== */
+
+function abrirPerfil(name){
+  const k=name.trim().toLowerCase();
+  const j=jugadores[k];
+  if(!j)return;
+  renderPerfil(j);
+  showScreen('perfil',null);
+}
+
+function renderPerfil(j){
+  const el=document.getElementById('perfil-content');
+  if(!el)return;
+
+  // ── Stats globales ──────────────────────────────────────────────────
+  const partidos=j.partidos||0;
+  const ganados=j.ganados||0;
+  const perdidos=j.perdidos||0;
+  const empatados=j.empatados||0;
+  const pct=partidos>0?Math.round(ganados/partidos*100):0;
+  const racha=j.racha||0;
+  const goles=j.goles||0;
+  const asist=j.asistencias||0;
+  const am=j.amarillas||0;
+  const ro=j.rojas||0;
+  const posPrincipal=Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1])[0];
+  const posNombre=posPrincipal&&posLabels?posLabels[posPrincipal[0]]||posPrincipal[0]:'—';
+
+  // ── Media del grupo ─────────────────────────────────────────────────
+  const todos=Object.values(jugadores).filter(x=>x.partidos>0);
+  const mediaGoles=todos.length?Math.round((todos.reduce((s,x)=>s+(x.goles||0),0)/todos.length)*10)/10:0;
+  const mediaPartidos=todos.length?Math.round((todos.reduce((s,x)=>s+(x.partidos||0),0)/todos.length)*10)/10:0;
+  const mediaAsist=todos.length?Math.round((todos.reduce((s,x)=>s+(x.asistencias||0),0)/todos.length)*10)/10:0;
+
+  // ── Ranking posición ────────────────────────────────────────────────
+  const rankGoles=[...todos].sort((a,b)=>(b.goles||0)-(a.goles||0)).findIndex(x=>x.name===j.name)+1;
+  const rankPartidos=[...todos].sort((a,b)=>(b.partidos||0)-(a.partidos||0)).findIndex(x=>x.name===j.name)+1;
+
+  // ── Evolución mensual desde historial ──────────────────────────────
+  // historial entries have: fecha (DD/MM/YYYY), statsJugadores{name:{goles,asistencias,...}}, players[]
+  const mesesMap={};
+  historial.filter(h=>h.estado==='jugado').forEach(h=>{
+    const tit=(h.players||[]).filter(p=>p.rol==='tit');
+    const jugoComo=tit.find(p=>p.name.trim().toLowerCase()===j.name.trim().toLowerCase());
+    if(!jugoComo)return;
+    // Parse fecha DD/MM/YYYY
+    let mes='';
+    if(h.fecha){
+      const parts=h.fecha.split('/');
+      if(parts.length===3)mes=parts[2]+'-'+parts[1].padStart(2,'0'); // YYYY-MM
+    }
+    if(!mes)mes='Sin fecha';
+    if(!mesesMap[mes])mesesMap[mes]={mes,partidos:0,goles:0,asistencias:0,victorias:0};
+    mesesMap[mes].partidos++;
+    const stats=h.statsJugadores&&h.statsJugadores[j.name];
+    if(stats){
+      mesesMap[mes].goles+=stats.goles||0;
+      mesesMap[mes].asistencias+=stats.asistencias||0;
+    }
+    // Check if won
+    const sc=h.scoreA!==undefined?{a:h.scoreA,b:h.scoreB}:{a:0,b:0};
+    const eqA=h.teamA||[];const eqB=h.teamB||[];
+    const inA=eqA.includes(j.name);const inB=eqB.includes(j.name);
+    const ganador=sc.a>sc.b?'A':sc.b>sc.a?'B':'empate';
+    if((ganador==='A'&&inA)||(ganador==='B'&&inB))mesesMap[mes].victorias++;
+  });
+  const mesesArr=Object.values(mesesMap).sort((a,b)=>a.mes.localeCompare(b.mes));
+  const MESES_CORTOS={
+    '01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
+    '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'
+  };
+  function labelMes(m){
+    if(!m||m==='Sin fecha')return m;
+    const [y,mm]=m.split('-');
+    return (MESES_CORTOS[mm]||mm)+' '+y.slice(2);
+  }
+
+  // ── Mini bar chart SVG ──────────────────────────────────────────────
+  function barChart(data,colorFn,maxVal){
+    if(!data.length)return '<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin datos de partidos todavia</div>';
+    const W=320,H=80,barW=Math.min(32,Math.floor((W-20)/data.length)-4),gap=Math.floor((W-20)/data.length);
+    const maxV=maxVal||Math.max(...data.map(d=>d.v),1);
+    const bars=data.map((d,i)=>{
+      const bh=maxV>0?Math.round((d.v/maxV)*(H-24)):0;
+      const x=10+i*gap+Math.floor((gap-barW)/2);
+      const y=H-20-bh;
+      const col=colorFn(d,i);
+      return '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(2,bh)+'" rx="3" fill="'+col+'"/>'+
+        '<text x="'+(x+barW/2)+'" y="'+(H-5)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="DM Sans,sans-serif">'+d.label+'</text>'+
+        (d.v>0?'<text x="'+(x+barW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+col+'" font-family="DM Sans,sans-serif">'+d.v+'</text>':'');
+    }).join('');
+    return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+bars+'</svg>';
+  }
+
+  const chartGoles=barChart(
+    mesesArr.map(m=>({v:m.goles,label:labelMes(m.mes)})),
+    ()=>'var(--grass)',0
+  );
+  const chartPartidos=barChart(
+    mesesArr.map(m=>({v:m.partidos,label:labelMes(m.mes)})),
+    (d)=>d.v>0?'var(--blue)':'rgba(0,0,0,.1)',0
+  );
+
+  // ── Racha display ───────────────────────────────────────────────────
+  const rachaColor=racha>=3?'var(--grass)':racha<=-3?'var(--red)':'var(--amber)';
+  const rachaLabel=racha>=3?'Racha ganadora':racha<=-3?'Racha perdedora':racha===0?'Sin racha':'Forma irregular';
+  const rachaIco=racha>=3?'ti-trending-up':racha<=-3?'ti-trending-down':'ti-minus';
+
+  el.innerHTML=
+    // Back button
+    '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))" '+
+      'style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:\'DM Sans\',sans-serif">'+
+      '<i class="ti ti-arrow-left" style="font-size:16px"></i> Jugadores</button>'+
+
+    // ── Hero card ──────────────────────────────────────────────────────
+    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:18px 18px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px">'+
+      '<div style="width:60px;height:60px;border-radius:50%;background:'+jColor(j.name)+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;border:3px solid rgba(255,255,255,.2)">'+ini2(j.name)+'</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--lime);letter-spacing:.04em;line-height:1">'+j.name+'</div>'+
+        '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px">'+posNombre+
+          ' &middot; <span style="color:rgba(184,246,58,.6)">#'+rankGoles+' goleador</span>'+
+          ' &middot; <span style="color:rgba(184,246,58,.6)">#'+rankPartidos+' asistencia</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+
+    // ── Stats grid ────────────────────────────────────────────────────
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
+      [
+        {v:partidos,l:'Partidos',c:'var(--dark)'},
+        {v:pct+'%',l:'% Victorias',c:'var(--grass)'},
+        {v:goles,l:'Goles',c:'var(--grass)'},
+        {v:asist,l:'Asistencias',c:'#0C447C'},
+      ].map(s=>
+        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 8px;text-align:center">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;line-height:1;color:'+s.c+'">'+s.v+'</div>'+
+          '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">'+s.l+'</div>'+
+        '</div>'
+      ).join('')+
+    '</div>'+
+
+    // ── Racha ─────────────────────────────────────────────────────────
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">'+
+      '<div style="width:38px;height:38px;border-radius:50%;background:'+rachaColor+';opacity:.15;position:absolute"></div>'+
+      '<div style="width:38px;height:38px;border-radius:var(--r-sm);background:rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+        '<i class="ti '+rachaIco+'" style="font-size:20px;color:'+rachaColor+'"></i>'+
+      '</div>'+
+      '<div style="flex:1">'+
+        '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+rachaLabel+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+
+          ganados+'V &middot; '+empatados+'E &middot; '+perdidos+'D'+
+          (am>0||ro>0?' &middot; '+(am>0?am+' amarilla'+(am>1?'s':''):'')+(am>0&&ro>0?' &middot; ':''+(ro>0?ro+' roja'+(ro>1?'s':''):'')):'')+
+        '</div>'+
+      '</div>'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:'+rachaColor+'">'+
+        (racha>0?'+':'')+racha+
+      '</div>'+
+    '</div>'+
+
+    // ── Comparativa con el grupo ──────────────────────────────────────
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Comparativa con el grupo</div>'+
+      [
+        {label:'Goles',mio:goles,media:mediaGoles,icon:'ti-ball-football',color:'var(--grass)'},
+        {label:'Asistencias',mio:asist,media:mediaAsist,icon:'ti-boot-2',color:'#0C447C'},
+        {label:'Partidos',mio:partidos,media:mediaPartidos,icon:'ti-calendar',color:'var(--amber)'},
+      ].map(row=>{
+        const pctMio=row.media>0?Math.min(100,Math.round(row.mio/Math.max(row.mio,row.media)*100)):row.mio>0?100:0;
+        const pctMedia=row.media>0?Math.min(100,Math.round(row.media/Math.max(row.mio,row.media)*100)):0;
+        const mejor=row.mio>=row.media;
+        return '<div style="margin-bottom:10px">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
+            '<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--dark)">'+
+              '<i class="ti '+row.icon+'" style="font-size:13px;color:'+row.color+'"></i> '+row.label+
+            '</div>'+
+            '<div style="font-size:11px;color:var(--muted)">'+
+              '<span style="font-weight:700;color:'+(mejor?'var(--grass)':'var(--dark)')+'">'+row.mio+'</span>'+
+              ' vs '+row.media+' media'+
+            '</div>'+
+          '</div>'+
+          '<div style="position:relative;height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:2px">'+
+            '<div style="position:absolute;inset:0;height:100%;border-radius:99px;background:rgba(0,0,0,.08);width:'+pctMedia+'%"></div>'+
+            '<div style="position:absolute;inset:0;height:100%;border-radius:99px;background:'+row.color+';width:'+pctMio+'%"></div>'+
+          '</div>'+
+          '<div style="font-size:9px;color:var(--muted);text-align:right">media grupo: '+row.media+'</div>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+
+    // ── Evolución mensual ─────────────────────────────────────────────
+    (mesesArr.length?
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Goles por mes</div>'+
+        chartGoles+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Partidos por mes</div>'+
+        chartPartidos+
+      '</div>':
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px">'+
+        '<i class="ti ti-chart-bar" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>'+
+        'La evolucion mensual aparecera cuando se cierren partidos con estadisticas'+
+      '</div>'
+    )+
+
+    // ── Posiciones jugadas ────────────────────────────────────────────
+    (posPrincipal?
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Posiciones jugadas</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+          Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1]).map(([pos,n])=>{
+            const total=Object.values(j.posiciones||{}).reduce((s,x)=>s+x,0);
+            const pctP=total>0?Math.round(n/total*100):0;
+            return '<div style="display:flex;align-items:center;gap:6px;background:var(--offwhite);border-radius:99px;padding:5px 12px">'+
+              '<span style="font-weight:700;font-size:12px;color:var(--dark)">'+(posLabels&&posLabels[pos]||pos)+'</span>'+
+              '<span style="font-size:11px;color:var(--muted)">'+n+'x &middot; '+pctP+'%</span>'+
+            '</div>';
+          }).join('')+
+        '</div>'+
+      '</div>':'') +
+
+    // Back bottom
+    '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))" '+
+      'style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:1px solid var(--border2);border-radius:var(--r-sm);background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);font-family:\'DM Sans\',sans-serif;margin-top:4px">'+
+      '<i class="ti ti-arrow-left" style="font-size:14px"></i> Volver a jugadores</button>';
+}
+
+
+/* ===== DASHBOARD DE TEMPORADA ===== */
+function renderDashboard(){
+  const el=document.getElementById('dashboard-content');
+  if(!el)return;
+
+  const jugados=historial.filter(h=>h.estado==='jugado');
+  const cancelados=historial.filter(h=>h.estado==='cancelado');
+  const totalPartidos=jugados.length;
+  const mediaAsistencia=totalPartidos?Math.round(jugados.reduce((s,h)=>s+(h.asistentes||0),0)/totalPartidos*10)/10:0;
+
+  // Top goleador
+  const topGoleador=Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0))[0];
+  const topAsistente=Object.values(jugadores).sort((a,b)=>(b.asistencias||0)-(a.asistencias||0))[0];
+  const topPartidos=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0))[0];
+  const totalJugadores=Object.keys(jugadores).length;
+
+  // Resultados: goles totales y empates
+  const totalGolesA=jugados.reduce((s,h)=>s+(h.scoreA||0),0);
+  const totalGolesB=jugados.reduce((s,h)=>s+(h.scoreB||0),0);
+  const empates=jugados.filter(h=>h.scoreA===h.scoreB).length;
+
+  // Monthly data
+  const MESES_CORTOS={'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
+    '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'};
+  const mesesMap={};
+  jugados.forEach(h=>{
+    if(!h.fecha)return;
+    const parts=h.fecha.split('/');
+    if(parts.length!==3)return;
+    const key=parts[2]+'-'+parts[1].padStart(2,'0');
+    if(!mesesMap[key])mesesMap[key]={partidos:0,asistentes:0,goles:0};
+    mesesMap[key].partidos++;
+    mesesMap[key].asistentes+=h.asistentes||0;
+    mesesMap[key].goles+=(h.scoreA||0)+(h.scoreB||0);
+  });
+  const mesesArr=Object.entries(mesesMap).sort((a,b)=>a[0].localeCompare(b[0]));
+  function labelMes(k){const[y,m]=k.split('-');return(MESES_CORTOS[m]||m)+'\n'+y.slice(2);}
+
+  // SVG bar chart builder
+  function svgBars(data,color,label){
+    if(!data.length)return '<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin datos aun</div>';
+    const W=320,H=100,n=data.length;
+    const barW=Math.max(8,Math.min(40,Math.floor((W-24)/n)-4));
+    const gap=Math.floor((W-24)/n);
+    const maxV=Math.max(...data.map(d=>d.v),1);
+    const bars=data.map((d,i)=>{
+      const bh=maxV>0?Math.round((d.v/maxV)*(H-32)):0;
+      const x=12+i*gap+Math.floor((gap-barW)/2);
+      const y=H-22-bh;
+      const lbl=d.label.split('\n');
+      return '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(2,bh)+'" rx="3" fill="'+color+'"/>'+
+        (d.v>0?'<text x="'+(x+barW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="8" font-weight="700" fill="'+color+'" font-family="DM Sans,sans-serif">'+d.v+'</text>':'')+
+        lbl.map((l,li)=>'<text x="'+(x+barW/2)+'" y="'+(H-9+li*9)+'" text-anchor="middle" font-size="7.5" fill="var(--muted)" font-family="DM Sans,sans-serif">'+l+'</text>').join('');
+    }).join('');
+    return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">'+bars+'</svg>';
+  }
+
+  const chartPartidos=svgBars(mesesArr.map(([k,v])=>({v:v.partidos,label:labelMes(k)})),'var(--grass)','Partidos');
+  const chartAsistencia=svgBars(mesesArr.map(([k,v])=>({v:v.asistentes,label:labelMes(k)})),'#0C447C','Asistencia');
+  const chartGoles=svgBars(mesesArr.map(([k,v])=>({v:v.goles,label:labelMes(k)})),'var(--amber)','Goles');
+
+  if(!totalPartidos){
+    el.innerHTML=
+      '<div style="background:var(--pitch);border-radius:var(--r-md);padding:24px;text-align:center;margin-bottom:16px">'+
+        '<i class="ti ti-chart-bar" style="font-size:40px;color:rgba(184,246,58,.3);display:block;margin-bottom:12px"></i>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.04em;margin-bottom:6px">Dashboard de Temporada</div>'+
+        '<div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.6">Los datos apareceran aqui cuando se cierren partidos con resultado desde el panel del organizador.</div>'+
+      '</div>';
+    return;
+  }
+
+  el.innerHTML=
+    // ── Cabecera ────────────────────────────────────────────────────────
+    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px">'+
+      '<div style="width:48px;height:48px;border-radius:50%;background:rgba(184,246,58,.1);border:2px solid rgba(184,246,58,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+        '<i class="ti ti-chart-bar" style="font-size:22px;color:var(--lime)"></i>'+
+      '</div>'+
+      '<div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.05em;line-height:1">Dashboard de Temporada</div>'+
+        '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">'+totalPartidos+' partido'+(totalPartidos!==1?'s':'')+' jugado'+(totalPartidos!==1?'s':'')+' &middot; '+totalJugadores+' jugador'+(totalJugadores!==1?'es':'')+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    // ── Métricas principales ─────────────────────────────────────────────
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+      [
+        {v:totalPartidos,l:'Partidos jugados',i:'ti-ball-football',c:'var(--grass)'},
+        {v:mediaAsistencia,l:'Media asistencia',i:'ti-users',c:'#0C447C'},
+        {v:totalGolesA+totalGolesB,l:'Goles totales',i:'ti-tournament',c:'var(--amber)'},
+        {v:cancelados.length,l:'Cancelados',i:'ti-x',c:'var(--red)'},
+      ].map(m=>
+        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;display:flex;align-items:center;gap:10px">'+
+          '<div style="width:36px;height:36px;border-radius:var(--r-sm);background:var(--offwhite);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+            '<i class="ti '+m.i+'" style="font-size:18px;color:'+m.c+'"></i>'+
+          '</div>'+
+          '<div>'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;line-height:1;color:'+m.c+'">'+m.v+'</div>'+
+            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">'+m.l+'</div>'+
+          '</div>'+
+        '</div>'
+      ).join('')+
+    '</div>'+
+
+    // ── Top jugadores ─────────────────────────────────────────────────────
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:14px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px"><i class="ti ti-medal" style="font-size:13px"></i> Líderes de la temporada</div>'+
+      [
+        {label:'Goleador',icon:'ti-ball-football',color:'var(--grass)',j:topGoleador,stat:'goles'},
+        {label:'Asistente',icon:'ti-boot-2',color:'#0C447C',j:topAsistente,stat:'asistencias'},
+        {label:'Más partidos',icon:'ti-calendar-check',color:'var(--amber)',j:topPartidos,stat:'partidos'},
+      ].map(row=>{
+        if(!row.j)return '';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+          '<div style="width:32px;height:32px;border-radius:50%;background:'+row.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+ini2(row.j.name)+'</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+row.j.name+'</div>'+
+            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">'+row.label+'</div>'+
+          '</div>'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:'+row.color+'">'+( row.j[row.stat]||0)+'</div>'+
+          '<i class="ti '+row.icon+'" style="font-size:15px;color:'+row.color+';opacity:.6"></i>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+
+    // ── Gráfico partidos por mes ──────────────────────────────────────────
+    (mesesArr.length?
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-chart-bar" style="font-size:12px"></i> Partidos por mes</div>'+
+        chartPartidos+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-users" style="font-size:12px"></i> Asistencia por mes</div>'+
+        chartAsistencia+
+      '</div>'+
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:14px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-tournament" style="font-size:12px"></i> Goles por mes</div>'+
+        chartGoles+
+      '</div>':'') +
+
+    // ── Ranking completo ──────────────────────────────────────────────────
+    (Object.keys(jugadores).length?
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px">'+
+        '<div style="padding:12px 14px;border-bottom:1px solid var(--border)">'+
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)"><i class="ti ti-list-numbers" style="font-size:12px"></i> Tabla de la temporada</div>'+
+        '</div>'+
+        '<table style="width:100%;border-collapse:collapse">'+
+          '<thead><tr style="background:var(--offwhite)">'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left;width:28px">#</th>'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left">Jugador</th>'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:center">PJ</th>'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--grass);text-transform:uppercase;letter-spacing:.06em;text-align:center">G</th>'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:#0C447C;text-transform:uppercase;letter-spacing:.06em;text-align:center">A</th>'+
+            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:#B8860B;text-transform:uppercase;letter-spacing:.06em;text-align:center">V</th>'+
+          '</tr></thead>'+
+          '<tbody>'+
+            Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0)||(b.partidos||0)-(a.partidos||0)).map((j,i)=>
+              '<tr style="border-bottom:1px solid var(--border)">'+
+                '<td style="padding:8px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:'+(i===0?'#C8960C':i===1?'#9E9E9E':i===2?'#8D6E63':'var(--muted)')+'">'+(i+1)+'</td>'+
+                '<td style="padding:8px 10px">'+
+                  '<div style="display:flex;align-items:center;gap:7px">'+
+                    '<div style="width:26px;height:26px;border-radius:50%;background:'+jColor(j.name)+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">'+ini2(j.name)+'</div>'+
+                    '<span style="font-weight:600;font-size:12px;color:var(--dark)">'+j.name+'</span>'+
+                  '</div>'+
+                '</td>'+
+                '<td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">'+(j.partidos||0)+'</td>'+
+                '<td style="padding:8px 10px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--grass)">'+(j.goles||0)+'</td>'+
+                '<td style="padding:8px 10px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:#0C447C">'+(j.asistencias||0)+'</td>'+
+                '<td style="padding:8px 10px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:#B8860B">'+(j.ganados||0)+'</td>'+
+              '</tr>'
+            ).join('')+
+          '</tbody>'+
+        '</table>'+
+      '</div>':'');
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -2747,6 +3463,36 @@ window.addEventListener('load',function(){
 
 
 
+<!-- Modal cambiar PIN -->
+<div id="modal-cambiar-pin" class="modal-bg" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Cambiar codigo PIN</h2>
+    <p class="msub" id="pin-cambio-sub">Paso 1 de 3: introduce el codigo actual</p>
+    <div style="display:flex;justify-content:center;gap:12px;margin:20px 0 8px" id="pin-cambio-dots">
+      <div class="pin-dot" id="pcd0"></div>
+      <div class="pin-dot" id="pcd1"></div>
+      <div class="pin-dot" id="pcd2"></div>
+      <div class="pin-dot" id="pcd3"></div>
+    </div>
+    <div id="pin-cambio-err" style="font-size:12px;color:var(--red);font-weight:600;min-height:18px;margin-bottom:10px;text-align:center"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+      <button class="pin-key" onclick="pinCambioKey('1')">1</button>
+      <button class="pin-key" onclick="pinCambioKey('2')">2</button>
+      <button class="pin-key" onclick="pinCambioKey('3')">3</button>
+      <button class="pin-key" onclick="pinCambioKey('4')">4</button>
+      <button class="pin-key" onclick="pinCambioKey('5')">5</button>
+      <button class="pin-key" onclick="pinCambioKey('6')">6</button>
+      <button class="pin-key" onclick="pinCambioKey('7')">7</button>
+      <button class="pin-key" onclick="pinCambioKey('8')">8</button>
+      <button class="pin-key" onclick="pinCambioKey('9')">9</button>
+      <button class="pin-key" onclick="pinCambioKey('0')" style="grid-column:2">0</button>
+      <button class="pin-key" onclick="pinCambioDel()" style="grid-column:3;font-size:18px;color:var(--muted)"><i class="ti ti-backspace"></i></button>
+    </div>
+    <button class="btn-outline" onclick="closeModal('modal-cambiar-pin');resetPinCambio()">Cancelar</button>
+  </div>
+</div>
+
 <!-- Asistencia modal -->
 <div id="modal-asistencia" class="modal-bg">
   <div class="modal">
@@ -2793,7 +3539,7 @@ window.addEventListener('load',function(){
 
 
 <script>
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
       .then(function(reg){console.log('SW registered:',reg.scope);})
