@@ -2119,6 +2119,7 @@ function renderOrgPanel(){
         /* Buttons */
         '<div class="org-btn-row" style="margin-bottom:12px">'+
           '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgToggleStatus(this.dataset.cid)"><i class="ti ti-lock"></i> '+(c.status==='cerrada'?'Reabrir':'Cerrar')+'</button>'+
+          '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)" style="color:var(--blue)"><i class="ti ti-pencil"></i> Editar</button>'+
           '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgCancelarConv(this.dataset.cid)"><i class="ti ti-x"></i> Cancelar</button>'+
           '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgLimpiarConv(this.dataset.cid)"><i class="ti ti-eraser"></i> Limpiar</button>'+
         '</div>'+
@@ -4251,6 +4252,68 @@ function fallbackCompartir(canvas, texto){
   showToast('Imagen descargada · Abriendo WhatsApp');
 }
 
+
+/* ===== EDITAR CONVOCATORIA ===== */
+function abrirEditarConv(cid){
+  const c = convocatorias.find(x=>x.id===cid);
+  if(!c) return;
+
+  document.getElementById('edit-conv-id').value = cid;
+  document.getElementById('edit-hora').value    = c.hora || '';
+  document.getElementById('edit-lugar').value   = c.lugar || '';
+  document.getElementById('edit-maps').value    = c.maps || '';
+  document.getElementById('edit-coste').value   = c.coste!==undefined ? c.coste : '';
+  document.getElementById('edit-pagar').value   = c.pagar || '';
+  document.getElementById('edit-notas').value   = c.notas || '';
+
+  // Format cierreAt for datetime-local input
+  const cierreEl = document.getElementById('edit-cierre');
+  if(c.cierreAt){
+    try{
+      const d = new Date(c.cierreAt);
+      // datetime-local needs "YYYY-MM-DDTHH:MM"
+      const pad = n => String(n).padStart(2,'0');
+      cierreEl.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+    }catch(e){ cierreEl.value = ''; }
+  } else {
+    cierreEl.value = '';
+  }
+
+  openModal('modal-editar-conv');
+}
+
+function guardarEditarConv(){
+  const cid   = document.getElementById('edit-conv-id').value;
+  const c     = convocatorias.find(x=>x.id===cid);
+  if(!c){ showToast('Convocatoria no encontrada'); return; }
+
+  const hora   = document.getElementById('edit-hora').value.trim();
+  const lugar  = document.getElementById('edit-lugar').value.trim();
+  const maps   = document.getElementById('edit-maps').value.trim();
+  const coste  = document.getElementById('edit-coste').value;
+  const pagar  = document.getElementById('edit-pagar').value.trim();
+  const notas  = document.getElementById('edit-notas').value.trim();
+  const cierre = document.getElementById('edit-cierre').value;
+
+  if(hora)  c.hora  = hora;
+  if(lugar) c.lugar = lugar;
+  c.maps  = maps;
+  c.pagar = pagar;
+  c.notas = notas;
+  if(coste !== '') c.coste = parseFloat(coste) || 0;
+
+  // Update cierreAt if changed
+  if(cierre){
+    c.cierreAt = new Date(cierre).toISOString();
+  }
+
+  saveCloud();
+  closeModal('modal-editar-conv');
+  renderOrgPanel();
+  renderInicioMulti();
+  showToast('Convocatoria actualizada');
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -4411,6 +4474,45 @@ window.addEventListener('load',function(){
     </div>
     <!-- Canvas oculto para exportar imagen -->
     <canvas id="campo-canvas" style="display:none"></canvas>
+  </div>
+</div>
+
+
+<!-- Modal editar convocatoria -->
+<div id="modal-editar-conv" class="modal-bg" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Editar convocatoria</h2>
+    <p class="msub">Los inscritos no se verán afectados</p>
+
+    <input type="hidden" id="edit-conv-id">
+
+    <div class="fl">Hora</div>
+    <input class="fi" type="time" id="edit-hora">
+
+    <div class="fl">Campo / Lugar</div>
+    <input class="fi" type="text" id="edit-lugar" placeholder="Nombre del campo">
+
+    <div class="fl">Maps (enlace opcional)</div>
+    <input class="fi" type="url" id="edit-maps" placeholder="https://maps.google.com/...">
+
+    <div class="fl">Coste (€)</div>
+    <input class="fi" type="number" id="edit-coste" min="0" step="0.5" placeholder="0">
+
+    <div class="fl">Quién paga</div>
+    <input class="fi" type="text" id="edit-pagar" placeholder="Cada uno paga al llegar...">
+
+    <div class="fl">Notas</div>
+    <textarea class="fi" id="edit-notas" rows="3" placeholder="Información adicional..." style="resize:vertical"></textarea>
+
+    <div class="fl">Cierre automático</div>
+    <input class="fi" type="datetime-local" id="edit-cierre">
+    <p style="font-size:11px;color:var(--muted);margin-top:-8px">Deja vacío para no cambiar el cierre actual</p>
+
+    <button class="btn-green" onclick="guardarEditarConv()">
+      <i class="ti ti-check"></i> Guardar cambios
+    </button>
+    <button class="btn-outline" onclick="closeModal('modal-editar-conv')">Cancelar</button>
   </div>
 </div>
 
