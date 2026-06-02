@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v2.7 - 02/06/2026 -->
+<!-- Peña Garrucha v2.7 - 02/06/2026 20:50 -->
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -9,6 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d4a1f">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -4198,6 +4202,10 @@ window.addEventListener('load',function(){
 
 <script>
 if('serviceWorker' in navigator && location.hostname !== 'www.claudeusercontent.com'){
+  // Unregister old service workers to force fresh content
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
       .then(function(reg){console.log('SW registered:',reg.scope);})
