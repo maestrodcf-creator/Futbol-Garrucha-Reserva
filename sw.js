@@ -1,19 +1,19 @@
-const CACHE='pena-garrucha-v1';
-const ASSETS=[
-  '/Futbol-Garrucha-Reserva/',
-  '/Futbol-Garrucha-Reserva/index.html',
-  '/Futbol-Garrucha-Reserva/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap',
-  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css'
-];
+// Peña Garrucha SW v2.7 - 02/06/2026 20:50
+const CACHE = 'pena-garrucha-v2-7';
+const BUST = '1780433456.745842';
 
-self.addEventListener('install',e=>{
+self.addEventListener('install', e=>{
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
+    caches.open(CACHE).then(c=>c.addAll([
+      '/Futbol-Garrucha-Reserva/',
+      '/Futbol-Garrucha-Reserva/index.html',
+      '/Futbol-Garrucha-Reserva/manifest.json',
+    ]))
   );
 });
 
-self.addEventListener('activate',e=>{
+self.addEventListener('activate', e=>{
   e.waitUntil(
     caches.keys().then(keys=>Promise.all(
       keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
@@ -21,22 +21,22 @@ self.addEventListener('activate',e=>{
   );
 });
 
-self.addEventListener('fetch',e=>{
-  // Network first for Supabase API calls
-  if(e.request.url.includes('supabase.co')){
-    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+self.addEventListener('fetch', e=>{
+  // Always network-first for the app HTML and Supabase
+  if(e.request.url.includes('supabase') || 
+     e.request.url.includes('index.html') ||
+     e.request.url.endsWith('/')) {
+    e.respondWith(
+      fetch(e.request).then(r=>{
+        const clone=r.clone();
+        caches.open(CACHE).then(c=>c.put(e.request,clone));
+        return r;
+      }).catch(()=>caches.match(e.request))
+    );
     return;
   }
-  // Cache first for everything else
+  // Cache-first for static assets
   e.respondWith(
-    caches.match(e.request).then(cached=>{
-      if(cached)return cached;
-      return fetch(e.request).then(res=>{
-        if(!res||res.status!==200||res.type==='opaque')return res;
-        const clone=res.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,clone));
-        return res;
-      });
-    })
+    caches.match(e.request).then(r=>r||fetch(e.request))
   );
 });
