@@ -3903,12 +3903,17 @@ function dibujarCampoEquipos(){
     });
     wrap.addEventListener('dragend', ()=>{ wrap.style.opacity='1'; wrap.style.cursor='grab'; });
 
-    // Click/tap to select & swap
+    // Click/tap to select & swap (same or different team)
     wrap.addEventListener('click', e=>{
       e.stopPropagation();
       if(selected && selected.name!==p.name){
-        // Swap teams
-        intercambiarJugadores(selected.name, selected.team, p.name, team);
+        if(selected.team===team){
+          // Same team — swap slot positions visually by swapping team arrays
+          intercambiarMismoEquipo(selected.name, p.name, team);
+        }else{
+          // Different team — swap teams
+          intercambiarJugadores(selected.name, selected.team, p.name, team);
+        }
         selected = null;
         return;
       }
@@ -3987,6 +3992,21 @@ function resetEquipos(){
   c.teamB=tit.slice(mid).map(p=>p.name);
   saveCloud();dibujarCampoEquipos();renderOrgPanel();
   showToast('Equipos reiniciados');
+}
+
+function intercambiarMismoEquipo(nameA, nameB, team){
+  const c = convocatorias.find(x=>x.id===_campoCid);if(!c)return;
+  const arr = team==='A' ? c.teamA : c.teamB;
+  if(!arr) return;
+  const iA = arr.indexOf(nameA);
+  const iB = arr.indexOf(nameB);
+  if(iA<0||iB<0) return;
+  // Swap positions in the array (which controls slot order = field position)
+  arr[iA] = nameB;
+  arr[iB] = nameA;
+  saveCloud();
+  showToast(nameA.split(' ')[0]+' ↔ '+nameB.split(' ')[0]);
+  dibujarCampoEquipos();
 }
 
 function asignarSinEquipo(name, team){
