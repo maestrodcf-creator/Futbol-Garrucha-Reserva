@@ -4017,6 +4017,240 @@ function asignarSinEquipo(name, team){
   showToast(name.split(' ')[0]+' → Eq.'+team);
 }
 
+
+/* ===== COMPARTIR CAMPO ===== */
+function compartirCampo(){
+  const c = convocatorias.find(x=>x.id===_campoCid);
+  if(!c){ showToast('Sin convocatoria seleccionada'); return; }
+  const tit = getConvTit(c);
+  const isSala = c.tipo === 'sala';
+
+  const canvas = document.getElementById('campo-canvas');
+  if(!canvas){ showToast('Error al generar imagen'); return; }
+
+  const W = 700, H = isSala ? 420 : 500;
+  canvas.width = W; canvas.height = H + 120; // extra for lists below
+  const ctx = canvas.getContext('2d');
+
+  const eqAnames = (c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+  const eqBnames = (c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+
+  function sortGK(names){
+    const players=names.map(n=>tit.find(p=>p.name===n)).filter(Boolean);
+    const gi=players.findIndex(p=>p.pos==='portero'||p.pos==='portero-jugador');
+    if(gi>0){const gk=players.splice(gi,1)[0];players.unshift(gk);}
+    return players;
+  }
+  const eqA = sortGK([...eqAnames]);
+  const eqB = sortGK([...eqBnames]);
+
+  const COL_A='#f5c842', COL_A_GK='#c9a000';
+  const COL_B='#f5822a', COL_B_GK='#c04800';
+
+  // Zone positions
+  const ZA_S=[[.06,.50],[.21,.28],[.21,.72],[.40,.17],[.40,.50],[.40,.83]];
+  const ZB_S=[[.94,.50],[.79,.28],[.79,.72],[.60,.17],[.60,.50],[.60,.83]];
+  const ZA_7=[[.06,.50],[.19,.25],[.19,.75],[.32,.17],[.32,.50],[.32,.83],[.45,.33],[.45,.67]];
+  const ZB_7=[[.94,.50],[.81,.25],[.81,.75],[.68,.17],[.68,.50],[.68,.83],[.55,.33],[.55,.67]];
+  const ZA=isSala?ZA_S:ZA_7, ZB=isSala?ZB_S:ZB_7;
+
+  // ── Draw pitch background ──────────────────────────────────────────────
+  const nS=16, sw=W/nS;
+  for(let i=0;i<nS;i++){
+    ctx.fillStyle = i%2===0 ? '#1e6630' : '#257035';
+    ctx.fillRect(i*sw, 0, sw, H);
+  }
+
+  // Pitch lines
+  ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=2;
+  ctx.strokeRect(10,10,W-20,H-20);
+
+  // Halfway line
+  ctx.beginPath(); ctx.moveTo(W/2,10); ctx.lineTo(W/2,H-10); ctx.stroke();
+
+  // Centre circle
+  ctx.beginPath(); ctx.arc(W/2,H/2,isSala?56:68,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2,H/2,5,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.7)'; ctx.fill();
+
+  // Penalty areas
+  const paW=isSala?96:112, paH=isSala?Math.round(H*.34):Math.round(H*.38);
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5;
+  ctx.strokeRect(10, H/2-paH/2, paW, paH);
+  ctx.strokeRect(W-10-paW, H/2-paH/2, paW, paH);
+
+  // 6-yard boxes
+  ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1;
+  ctx.strokeRect(10, H/2-H*.09, W*.044, H*.18);
+  ctx.strokeRect(W-10-W*.044, H/2-H*.09, W*.044, H*.18);
+
+  // Goals
+  ctx.fillStyle='rgba(255,255,255,.15)';
+  ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=2;
+  ctx.fillRect(0, H/2-H*.075, 10, H*.15);
+  ctx.strokeRect(0, H/2-H*.075, 10, H*.15);
+  ctx.fillRect(W-10, H/2-H*.075, 10, H*.15);
+  ctx.strokeRect(W-10, H/2-H*.075, 10, H*.15);
+
+  // Penalty spots
+  ctx.fillStyle='rgba(255,255,255,.6)';
+  ctx.beginPath(); ctx.arc(W*.13,H/2,4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*.87,H/2,4,0,Math.PI*2); ctx.fill();
+
+  // Team labels on pitch
+  ctx.font = 'bold 15px "Bebas Neue", sans-serif';
+  ctx.fillStyle = COL_A; ctx.letterSpacing='1px';
+  ctx.fillText('EQ. A', 20, 28);
+  ctx.fillStyle = COL_B;
+  ctx.textAlign='right'; ctx.fillText('EQ. B', W-20, 28);
+  ctx.textAlign='left';
+
+  // Tactic label
+  ctx.font='10px "DM Sans",sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.3)';
+  ctx.textAlign='center';
+  ctx.fillText(isSala?'1-2-3':'1-2-3-2', W/2, H-8);
+  ctx.textAlign='left';
+
+  // ── Draw player tokens ─────────────────────────────────────────────────
+  const R = Math.round(W * 0.038);
+
+  function drawToken(p, zone, col, gkCol, isGK){
+    const x=Math.round(zone[0]*W), y=Math.round(zone[1]*H);
+    const bg = isGK ? gkCol : col;
+
+    // Shadow
+    ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=6;
+
+    // Circle
+    ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2);
+    ctx.fillStyle=bg; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=2; ctx.stroke();
+
+    // GK dashed ring
+    if(isGK){
+      ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.arc(x,y,R+3,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.shadowBlur=0;
+
+    // Initials
+    ctx.font=`bold ${Math.round(R*.55)}px "DM Sans",sans-serif`;
+    ctx.fillStyle='#111'; ctx.textAlign='center';
+    ctx.fillText(initials(p.name), x, y+Math.round(R*.2));
+
+    // Name below
+    ctx.font=`bold 10px "DM Sans",sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,.95)';
+    ctx.shadowColor='rgba(0,0,0,.9)'; ctx.shadowBlur=4;
+    const nm=p.name.split(' ')[0].substring(0,8);
+    ctx.fillText(nm, x, y+R+14);
+    ctx.shadowBlur=0; ctx.textAlign='left';
+  }
+
+  eqA.forEach((p,i)=>{ if(i<ZA.length) drawToken(p,ZA[i],COL_A,COL_A_GK,i===0); });
+  eqB.forEach((p,i)=>{ if(i<ZB.length) drawToken(p,ZB[i],COL_B,COL_B_GK,i===0); });
+
+  // ── Team lists below the pitch ─────────────────────────────────────────
+  const listY = H + 8;
+  const listH = 112;
+
+  // Background
+  ctx.fillStyle='#0d4a1f';
+  ctx.fillRect(0, H, W, listH);
+
+  // Header
+  ctx.font='bold 12px "DM Sans",sans-serif';
+  ctx.fillStyle='rgba(184,246,58,.7)';
+  ctx.textAlign='center';
+  const titulo=(isSala?'Fútbol Sala':'Fútbol 7')+' · '+c.dia+(c.diames?' '+c.diames:'')+' · '+c.hora+(c.lugar?' · '+c.lugar:'');
+  ctx.fillText(titulo, W/2, H+18);
+
+  // Eq A list
+  const midX = W/2 - 10;
+  ctx.textAlign='left';
+
+  // Eq A header
+  ctx.fillStyle=COL_A;
+  ctx.font='bold 11px "DM Sans",sans-serif';
+  ctx.fillText('🟡 EQUIPO A — AMARILLO', 14, H+36);
+
+  ctx.font='10px "DM Sans",sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  eqA.forEach((p,i)=>{
+    const col2 = Math.floor(i/4), row = i%4;
+    ctx.fillText((i===0?'(P) ':'')+p.name, 14+col2*120, H+50+row*14);
+  });
+
+  // Eq B header
+  ctx.fillStyle=COL_B;
+  ctx.font='bold 11px "DM Sans",sans-serif';
+  ctx.fillText('🟠 EQUIPO B — NARANJA', midX+14, H+36);
+
+  ctx.font='10px "DM Sans",sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  eqB.forEach((p,i)=>{
+    const col2 = Math.floor(i/4), row = i%4;
+    ctx.fillText((i===0?'(P) ':'')+p.name, midX+14+col2*120, H+50+row*14);
+  });
+
+  // Divider line
+  ctx.strokeStyle='rgba(255,255,255,.1)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(midX, H+24); ctx.lineTo(midX, H+listH-4); ctx.stroke();
+
+  // Footer note
+  ctx.font='9px "DM Sans",sans-serif';
+  ctx.fillStyle='rgba(184,246,58,.4)';
+  ctx.textAlign='center';
+  ctx.fillText('(P) = Portero · Peña Garrucha', W/2, H+listH-6);
+
+  // ── Share ─────────────────────────────────────────────────────────────
+  canvas.toBlob(blob=>{
+    if(!blob){ showToast('Error generando imagen'); return; }
+
+    // Build WA message
+    const texto = '🏟️ *'+( isSala?'Fútbol Sala':'Fútbol 7')+' — '+c.dia+(c.diames?' '+c.diames:'')+' '+c.hora+'*\n\n'+
+      '🟡 *Equipo A (Amarillo):*\n'+eqA.map((p,i)=>(i===0?'  🥅 ':'  • ')+p.name).join('\n')+'\n\n'+
+      '🟠 *Equipo B (Naranja):*\n'+eqB.map((p,i)=>(i===0?'  🥅 ':'  • ')+p.name).join('\n')+'\n\n'+
+      '📍 '+( c.lugar||'')+'\n'+
+      '🔗 https://maestrodcf-creator.github.io/Futbol-Garrucha-Reserva/';
+
+    // Try native share (mobile) with image
+    if(navigator.share && navigator.canShare){
+      const file = new File([blob],'campo-equipos.png',{type:'image/png'});
+      if(navigator.canShare({files:[file]})){
+        navigator.share({
+          files:[file],
+          title:'Equipos — Peña Garrucha',
+          text:texto,
+        }).catch(()=>{ fallbackCompartir(canvas, texto); });
+        return;
+      }
+    }
+    fallbackCompartir(canvas, texto);
+  }, 'image/png');
+}
+
+function fallbackCompartir(canvas, texto){
+  // On desktop or if native share not available:
+  // Download the image + open WhatsApp with text
+  const link = document.createElement('a');
+  link.download = 'campo-equipos.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+
+  // Open WhatsApp after short delay
+  setTimeout(()=>{
+    window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank');
+  }, 600);
+
+  showToast('Imagen descargada · Abriendo WhatsApp');
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -4171,7 +4405,12 @@ window.addEventListener('load',function(){
       <button class="btn-outline" style="flex:0" onclick="resetEquipos()">
         <i class="ti ti-refresh"></i> Reiniciar
       </button>
+      <button class="btn-outline" style="flex:0;color:var(--grass);border-color:var(--grass)" onclick="compartirCampo()">
+        <i class="ti ti-brand-whatsapp"></i> Compartir
+      </button>
     </div>
+    <!-- Canvas oculto para exportar imagen -->
+    <canvas id="campo-canvas" style="display:none"></canvas>
   </div>
 </div>
 
