@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v2.6 - 01/06/2026 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -407,6 +406,33 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 </style>
 </head>
 <body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash" style="position:fixed;inset:0;z-index:9999;background:#0d4a1f;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .4s ease">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:100px;height:100px;border-radius:50%;background:#1a6b30;border:3px solid rgba(184,246,58,.3);display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:splash-pulse 1.8s ease-in-out infinite">
+      <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+        <circle cx="22" cy="22" r="20" stroke="#b8f63a" stroke-width="1.5" stroke-opacity="0.5"/>
+        <circle cx="22" cy="22" r="13" fill="#1a6b30"/>
+        <path d="M22 9L25.5 17.5H34L27.5 22.5L30 31L22 26L14 31L16.5 22.5L10 17.5H18.5Z" fill="#b8f63a" opacity="0.95"/>
+      </svg>
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.1em;color:#b8f63a;line-height:1;margin-bottom:6px">Peña Garrucha</div>
+    <div style="font-size:11px;color:rgba(184,246,58,.45);letter-spacing:.15em;text-transform:uppercase;margin-bottom:36px">Fútbol · Convocatorias</div>
+    <div style="display:flex;gap:8px">
+      <div class="sdot" style="animation-delay:0s"></div>
+      <div class="sdot" style="animation-delay:.2s"></div>
+      <div class="sdot" style="animation-delay:.4s"></div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes splash-pulse{0%,100%{box-shadow:0 0 0 0 rgba(184,246,58,.15)}50%{box-shadow:0 0 0 16px rgba(184,246,58,0)}}
+@keyframes sdot-bounce{0%,80%,100%{transform:scale(0.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+.sdot{width:8px;height:8px;border-radius:50%;background:#b8f63a;animation:sdot-bounce 1.2s ease-in-out infinite}
+#splash.fade-out{opacity:0;pointer-events:none}
+</style>
+
 <div class="layout">
 
 <!-- ══════════════════════════════
@@ -428,7 +454,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   <div class="sidebar-nav">
     <button class="snb active" data-screen="inicio" onclick="showScreen('inicio',this)"><i class="ti ti-home"></i> Inicio</button>
     <button class="snb" data-screen="conv" id="snb-conv" onclick="showScreen('conv',this)" disabled><i class="ti ti-ball-football"></i> Convocatoria</button>
-    <button class="snb" data-screen="campo" id="snb-campo" onclick="showScreen('campo',this)" disabled><i class="ti ti-layout-grid"></i> Campo</button>
+    <button class="snb" data-screen="campo" id="snb-campo" onclick="showScreen('campo',this)"><i class="ti ti-layout-pitch"></i> Equipos</button>
     
     
     <button class="snb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i> Calendario</button>
@@ -547,17 +573,12 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <!-- ─── CAMPO ─── -->
     <div id="sc-campo" class="screen">
       <div class="sec-pad" style="padding-top:16px">
-        <div id="campo-empty" class="empty-st" style="padding:48px 0">
-          <i class="ti ti-ball-football" style="font-size:36px"></i>
-          <span class="emph" style="margin-top:4px">Campo vacío</span>
-          <p>Apúntate para ver las posiciones</p>
-        </div>
-        <div id="campo-wrap" style="display:none">
-          <div class="campo-outer" id="campo-inner"></div>
-          <div id="sin-asignar-sec" style="display:none;margin-top:14px">
-            <div class="stitle">Sin posición asignada</div>
-            <div class="card" id="sin-asignar-list"></div>
-          </div>
+        <div id="equipos-list"></div>
+        <div id="equipos-campo" style="display:none">
+          <button onclick="mostrarListaEquipos()" style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:'DM Sans',sans-serif">
+            <i class="ti ti-arrow-left" style="font-size:16px"></i> Volver a equipos
+          </button>
+          <div id="equipos-campo-inner"></div>
         </div>
       </div>
     </div>
@@ -631,7 +652,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         </div>
         <div style="font-weight:700;font-size:14px">Sesión activa</div>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="exportarCSV()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--grass);display:flex;align-items:center;gap:5px"><i class="ti ti-file-export" style="font-size:13px"></i> Exportar CSV</button>
         <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-keypad" style="font-size:13px"></i> Cambiar PIN</button>
         <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-lock" style="font-size:13px"></i> Bloquear</button>
       </div>
@@ -774,6 +796,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 <nav class="bnav" role="navigation">
   <button class="nb active" data-screen="inicio" onclick="showScreen('inicio',this)"><i class="ti ti-home"></i><span>Inicio</span></button>
   <button class="nb" data-screen="conv" id="nb-conv" onclick="showScreen('conv',this)" disabled><i class="ti ti-ball-football"></i><span>Conv.</span></button>
+  <button class="nb" data-screen="campo" id="nb-campo" onclick="showScreen('campo',this)"><i class="ti ti-layout-pitch"></i><span>Equipos</span></button>
   
   <button class="nb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i><span>Cal.</span></button>
   <button class="nb" data-screen="jugadores" onclick="showScreen('jugadores',this)"><i class="ti ti-users"></i><span>Jugadores</span></button>
@@ -1556,8 +1579,8 @@ function renderHistorial(){
 /* ═══════════════════════
    UI HELPERS
 ═══════════════════════ */
-const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Campo',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada'};
-const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Posiciones en el campo',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control'};
+const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Equipos',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada'};
+const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Equipos por convocatoria',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control'};
 
 function showScreen(id,btn){
   if(btn&&btn.disabled)return;
@@ -1637,12 +1660,13 @@ async function saveCloud(){
     sbSave('plantillas',plantillas),
     sbSave('pagos',pagos),
     sbSave('pin',PIN),
+    sbSave('listaNegra',listaNegra),
   ]);
 }
 async function loadCloud(){
-  const [convs,jug,hist,plts,pgs,savedPin]=await Promise.all([
+  const [convs,jug,hist,plts,pgs,savedPin,ln]=await Promise.all([
     sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
-    sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),
+    sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),sbLoad('listaNegra'),
   ]);
   if(convs){convocatorias=convs;}
   if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
@@ -1650,6 +1674,7 @@ async function loadCloud(){
   if(plts){plantillas=plts;}
   if(pgs){Object.keys(pagos).forEach(k=>delete pagos[k]);Object.assign(pagos,pgs);}
   if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
+  if(ln&&Array.isArray(ln)){listaNegra=ln;}
 }
 function startRealtime(){
   sb.channel('pg').on('postgres_changes',{event:'*',schema:'public',table:'app_data'},p=>{
@@ -1727,7 +1752,7 @@ function patchShowScreen(){
   showScreen=function(id,btn){
     orig(id,btn);
     if(id==='org'&&pinUnlocked)renderOrgPanel();
-    if(id==='campo')renderCampo();
+    if(id==='campo'){mostrarListaEquipos();}
     if(id==='lista'){/* lista rendered by verListaConv */}
     if(id==='perfil'){/* perfil rendered by abrirPerfil */}
     if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
@@ -1851,6 +1876,10 @@ let _inscConvId=null;
 function abrirInscMulti(cid){
   const c=convocatorias.find(x=>x.id===cid);
   if(!c||c.status==='cerrada'){showToast('Inscripcion cerrada');return;}
+  // Block vetoed players
+  if(_myName&&listaNegra.some(n=>n.trim().toLowerCase()===_myName.trim().toLowerCase())){
+    showToast('No puedes apuntarte a esta convocatoria');return;
+  }
   // Block if already signed up from this device
   if(_myName&&c.players&&c.players.find(p=>p.name===_myName)){
     showToast('Ya estas apuntado a esta convocatoria');return;
@@ -1894,6 +1923,9 @@ function confirmarInscMulti(){
   const nameEl=document.getElementById('inp-name');
   const name=(nameEl||{}).value||'';
   if(!name.trim()){if(nameEl)nameEl.focus();showToast('Escribe tu nombre');return;}
+  if(listaNegra.some(n=>n.trim().toLowerCase()===name.trim().toLowerCase())){
+    closeModal('modal-insc');showToast('Este jugador no puede apuntarse');return;
+  }
   const c=convocatorias.find(x=>x.id===_inscConvId);
   if(!c)return;
   if((selPos_==='portero'||selPos_==='portero-jugador')&&
@@ -1926,8 +1958,10 @@ function confirmarInscMulti(){
 function salirDeConv(cid){
   const c=convocatorias.find(x=>x.id===cid);
   if(!c||!_myName)return;
+  const wasTit2=(c.players||[]).some(p=>p.name===_myName&&p.rol==='tit');
   c.players=(c.players||[]).filter(p=>p.name!==_myName);
   c.talvez=(c.talvez||[]).filter(p=>p.name!==_myName);
+  if(wasTit2)promoverSuplente(c);
   saveCloud();renderInicioMulti();showToast('Has cancelado tu inscripcion');
 }
 function verListaConv(cid){
@@ -2120,36 +2154,9 @@ function renderOrgPanel(){
         /* Resultado inline */
         '<div style="border-top:1px solid var(--border);padding-top:12px">'+
           '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Resultado del partido</div>'+
-
-          // Warning if teams not manually assigned
-          (!(c.teamA&&c.teamA.length)&&tit.length?
-            '<div style="background:rgba(212,135,10,.1);border:1px solid rgba(212,135,10,.25);border-radius:var(--r-sm);padding:8px 12px;font-size:11px;color:var(--amber);margin-bottom:12px;display:flex;align-items:center;gap:7px">'+
-              '<i class="ti ti-alert-triangle" style="font-size:14px;flex-shrink:0"></i>'+
-              '<span>Equipos no asignados. Se usara division automatica por orden de inscripcion. Usa el boton <strong>Mover</strong> para asignar equipos correctamente antes de guardar.</span>'+
-            '</div>':'')+
-
-          // Team player lists above scores
-          (tit.length?
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
-              '<div style="background:rgba(130,180,255,.07);border:1px solid rgba(130,180,255,.15);border-radius:var(--r-sm);padding:8px 10px">'+
-                '<div style="font-size:9px;font-weight:700;color:rgba(130,180,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Equipo A</div>'+
-                (()=>{
-                  const ea=(c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
-                  return ea.map(n=>'<div style="font-size:11px;color:var(--dark);padding:1px 0">'+n+'</div>').join('');
-                })()+
-              '</div>'+
-              '<div style="background:rgba(184,246,58,.07);border:1px solid rgba(184,246,58,.15);border-radius:var(--r-sm);padding:8px 10px">'+
-                '<div style="font-size:9px;font-weight:700;color:rgba(184,246,58,.7);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Equipo B</div>'+
-                (()=>{
-                  const eb=(c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
-                  return eb.map(n=>'<div style="font-size:11px;color:var(--dark);padding:1px 0">'+n+'</div>').join('');
-                })()+
-              '</div>'+
-            '</div>':'') +
-
           '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:14px">'+
             '<div style="text-align:center">'+
-              '<div style="font-size:10px;font-weight:700;color:rgba(130,180,255,.8);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">EQ. A</div>'+
+              '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">EQ. A</div>'+
               '<div style="display:flex;align-items:center;gap:8px">'+
                 '<button class="score-btn" data-cid="'+cid+'" onclick="adjScConv(this.dataset.cid,\'a\',-1)">-</button>'+
                 '<div id="sc-a-'+cid+'" class="score-big">'+sc.a+'</div>'+
@@ -2158,7 +2165,7 @@ function renderOrgPanel(){
             '</div>'+
             '<div class="score-big" style="font-size:36px;color:var(--muted)">:</div>'+
             '<div style="text-align:center">'+
-              '<div style="font-size:10px;font-weight:700;color:rgba(184,246,58,.7);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">EQ. B</div>'+
+              '<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px">EQ. B</div>'+
               '<div style="display:flex;align-items:center;gap:8px">'+
                 '<button class="score-btn" data-cid="'+cid+'" onclick="adjScConv(this.dataset.cid,\'b\',-1)">-</button>'+
                 '<div id="sc-b-'+cid+'" class="score-big">'+sc.b+'</div>'+
@@ -2166,6 +2173,27 @@ function renderOrgPanel(){
               '</div>'+
             '</div>'+
           '</div>'+
+          (tit.length?
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Estadisticas</div>'+
+            tit.map(p=>{
+              const sid='sti_'+cid.replace(/\W/g,'_')+'_'+p.name.replace(/\W/g,'_');
+              return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;margin-bottom:8px">'+
+                '<div style="font-weight:700;font-size:13px;margin-bottom:8px">'+p.name+'</div>'+
+                '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'+
+                  [['goles','Goles'],['asistencias','Asist.'],['amarillas','Amarillas'],['rojas','Rojas']].map(([f,lbl])=>
+                    '<div><div class="stat-lbl">'+lbl+'</div><input type="number" id="'+sid+'_'+f+'" value="0" min="0" class="stat-input"></div>'
+                  ).join('')+
+                '</div>'+
+              '</div>';
+            }).join(''):
+            '<div style="font-size:12px;color:var(--muted);padding:4px 0">Apunta jugadores para registrar estadisticas</div>'
+          )+
+          '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'+
+            '<button class="btn-green" style="flex:1;min-width:200px" data-cid="'+cid+'" onclick="orgGuardarResultado(this.dataset.cid)"><i class="ti ti-check"></i> Guardar y cerrar partido</button>'+
+            '<button class="btn-outline" data-cid="'+cid+'" onclick="orgAbrirAsistencia(this.dataset.cid)"><i class="ti ti-checkbox"></i> Asistencia</button>'+
+          '</div>'+
+        '</div>'+ /* /resultado */
+
         /* PAGOS */
         '<div style="border-top:1px solid var(--border);padding:12px 0 0">'+
           '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Control de pagos</div>'+
@@ -2195,9 +2223,11 @@ function renderOrgPanel(){
     '</div>'; /* /org-conv-card */
   }).join('');
   renderOrgJug();
+  renderListaNegra();
   renderPlantillas();
   syncCalFromConvs();
   if(typeof renderCalendar==='function')renderCalendar();
+
 }
 
 /* ===== ORG ACTIONS ===== */
@@ -2222,9 +2252,8 @@ function orgCancelarConv(cid){
 }
 function orgEliminarInscrito(cid,rol,idx){
   const c=convocatorias.find(x=>x.id===cid);if(!c)return;
-  if(rol==='tv')(c.talvez||[]).splice(idx,1);
-  else(c.players||[]).splice(idx,1);
-  saveCloud();renderOrgPanel();showToast('Eliminado');
+  if(rol==='tv'){(c.talvez||[]).splice(idx,1);}else{const wasTit=rol==='tit';(c.players||[]).splice(idx,1);if(wasTit)promoverSuplente(c);}
+  saveCloud();renderOrgPanel();showToast('Inscrito eliminado');
 }
 function orgMoverJug(cid,name,eq){
   const c=convocatorias.find(x=>x.id===cid);if(!c)return;
@@ -2422,7 +2451,7 @@ function renderJugadoresEnhanced(){
     return '<div class="card" style="margin-bottom:10px;cursor:pointer" data-jname="'+j.name.replace(/"/g,'&quot;')+'" onclick="abrirPerfil(this.dataset.jname)">'+
       '<div style="padding:12px 14px;display:flex;align-items:center;gap:11px">'+
         '<div style="width:42px;height:42px;border-radius:50%;background:'+jColor(j.name)+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">'+ini2(j.name)+'</div>'+
-        '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+j.name+rh+'</div>'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+j.name+rh+insigniasPills(j.name)+'</div>'+
           '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+(pp&&posLabels?posLabels[pp[0]]||pp[0]:'Sin posicion')+' &middot; '+(j.partidos||0)+' partidos &middot; '+(j.ganados||0)+'V '+(j.empatados||0)+'E '+(j.perdidos||0)+'D</div></div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">'+
@@ -3143,6 +3172,9 @@ function renderPerfil(j){
       '</div>'+
     '</div>'+
 
+    // ── Insignias
+    insigniasCards(j.name)+
+
     // ── Comparativa con el grupo ──────────────────────────────────────
     '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
       '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Comparativa con el grupo</div>'+
@@ -3387,6 +3419,616 @@ function renderDashboard(){
       '</div>':'');
 }
 
+
+/* ===== SPLASH ===== */
+window._splashHidden=false;
+function hideSplash(){
+  if(window._splashHidden)return;
+  window._splashHidden=true;
+  const s=document.getElementById('splash');
+  if(s){s.classList.add('fade-out');setTimeout(()=>{s.style.display='none';},450);}
+}
+
+/* ===== EXPORTAR CSV ===== */
+function exportarCSV(){
+  const fecha=new Date().toLocaleDateString('es-ES').replace(/\//g,'-');
+  const jugRows=[
+    ['JUGADORES - TEMPORADA'],
+    ['Nombre','Partidos','Victorias','Empates','Derrotas','% Victorias','Goles','Asistencias','Amarillas','Rojas','Racha','Posicion principal'],
+  ];
+  Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0)).forEach(j=>{
+    const pct=j.partidos>0?Math.round((j.ganados||0)/j.partidos*100)+'%':'0%';
+    const pp=Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1])[0];
+    jugRows.push([j.name,j.partidos||0,j.ganados||0,j.empatados||0,j.perdidos||0,pct,
+      j.goles||0,j.asistencias||0,j.amarillas||0,j.rojas||0,j.racha||0,
+      pp&&posLabels?(posLabels[pp[0]]||pp[0]):'—']);
+  });
+  const histRows=[[''],['HISTORIAL DE PARTIDOS'],
+    ['Fecha','Tipo','Dia','Hora','Campo','Estado','Eq.A','Eq.B','Asistentes','Goles A','Goles B','Resultado']];
+  historial.slice().reverse().forEach(h=>{
+    histRows.push([h.fecha||'—',h.tipo==='sala'?'Sala':'F7',h.dia||'—',h.hora||'—',
+      h.lugar||'—',h.estado==='jugado'?'Jugado':'Cancelado',
+      (h.teamA||[]).join(' / ')||'—',(h.teamB||[]).join(' / ')||'—',
+      h.asistentes||0,h.scoreA!==undefined?h.scoreA:'—',h.scoreB!==undefined?h.scoreB:'—',
+      h.estado==='jugado'?(h.scoreA>h.scoreB?'Victoria A':h.scoreB>h.scoreA?'Victoria B':'Empate'):'Cancelado']);
+  });
+  const statsRows=[[''],['ESTADISTICAS POR PARTIDO'],['Fecha','Partido','Jugador','Goles','Asistencias','Amarillas','Rojas']];
+  historial.filter(h=>h.estado==='jugado'&&h.statsJugadores&&Object.keys(h.statsJugadores).length)
+    .slice().reverse().forEach(h=>{
+      const partido=(h.tipo==='sala'?'Sala':'F7')+' '+h.dia+' '+h.hora;
+      Object.entries(h.statsJugadores).forEach(([nombre,s])=>{
+        statsRows.push([h.fecha||'—',partido,nombre,s.goles||0,s.asistencias||0,s.amarillas||0,s.rojas||0]);
+      });
+    });
+  const jugados=historial.filter(h=>h.estado==='jugado');
+  const mediaAsist=jugados.length?Math.round(jugados.reduce((s,h)=>s+(h.asistentes||0),0)/jugados.length*10)/10:0;
+  const topG=Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0))[0];
+  const topA=Object.values(jugadores).sort((a,b)=>(b.asistencias||0)-(a.asistencias||0))[0];
+  const resumen=[[''],['RESUMEN'],['Partidos jugados',jugados.length],
+    ['Cancelados',historial.filter(h=>h.estado==='cancelado').length],
+    ['Jugadores',Object.keys(jugadores).length],['Media asistencia',mediaAsist],
+    ['Goleador',topG?topG.name+' ('+topG.goles+' goles)':'—'],
+    ['Asistente',topA?topA.name+' ('+topA.asistencias+' asist.)':'—'],
+    ['Exportado',new Date().toLocaleString('es-ES')]];
+  const allRows=[...resumen,...jugRows,...histRows,...statsRows];
+  function esc(v){const s=String(v===null||v===undefined?'':v);return(s.includes(',')||s.includes('"')||s.includes(';'))?'"'+s.replace(/"/g,'""')+'"':s;}
+  const csv='\uFEFF'+allRows.map(r=>Array.isArray(r)?r.map(esc).join(';'):'').join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='pena-garrucha-'+fecha+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('CSV descargado');
+}
+
+/* ===== INSIGNIAS ===== */
+function calcInsignias(jName){
+  const k=jName.trim().toLowerCase();const j=jugadores[k];if(!j)return[];
+  const todos=Object.values(jugadores);const ins=[];
+  // Goleador del mes
+  const jugados=historial.filter(h=>h.estado==='jugado'&&h.fecha&&h.statsJugadores);
+  if(jugados.length){
+    const meses=jugados.map(h=>{const p=h.fecha.split('/');return p.length===3?p[2]+'-'+p[1].padStart(2,'0'):'';}).filter(Boolean).sort().reverse();
+    const um=meses[0];
+    if(um){
+      const pm=jugados.filter(h=>{const p=h.fecha.split('/');return p.length===3&&(p[2]+'-'+p[1].padStart(2,'0'))===um;});
+      const gm={};pm.forEach(h=>Object.entries(h.statsJugadores||{}).forEach(([n,s])=>{const kk=n.trim().toLowerCase();gm[kk]=(gm[kk]||0)+(s.goles||0);}));
+      const mx=Math.max(...Object.values(gm),0);
+      if(mx>0&&(gm[k]||0)===mx){const M={'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun','07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'};const[y,m]=um.split('-');ins.push({id:'goleador-mes',icon:'ti-ball-football',label:'Goleador',desc:'Goleador de '+(M[m]||m)+' '+y+' ('+mx+' goles)',color:'#22883d',bg:'rgba(34,136,61,.12)'});}
+    }
+  }
+  if((j.racha||0)>=3)ins.push({id:'racha',icon:'ti-flame',label:'En racha',desc:(j.racha)+' victorias seguidas',color:'#d4870a',bg:'rgba(212,135,10,.12)'});
+  const esP=(j.posiciones&&((j.posiciones.portero||0)+(j.posiciones['portero-jugador']||0)))>0;
+  if(esP&&(j.partidos||0)>=3&&(j.perdidos||0)===0)ins.push({id:'invicto',icon:'ti-shield-check',label:'Invicto',desc:'Portero sin derrotas',color:'#1a56a8',bg:'rgba(26,86,168,.12)'});
+  const mp=Math.max(...todos.map(x=>x.partidos||0),0);
+  if(mp>=3&&(j.partidos||0)===mp)ins.push({id:'fiel',icon:'ti-heart',label:'Más fiel',desc:'Más partidos ('+mp+')',color:'#c0392b',bg:'rgba(192,57,43,.1)'});
+  if((j.goles||0)>=10)ins.push({id:'artillero',icon:'ti-target-arrow',label:'Artillero',desc:(j.goles)+' goles',color:'#22883d',bg:'rgba(34,136,61,.1)'});
+  if((j.partidos||0)>=20)ins.push({id:'capitan',icon:'ti-star',label:'Capitán',desc:(j.partidos)+' partidos',color:'#C8960C',bg:'rgba(200,150,12,.1)'});
+  return ins;
+}
+function insigniasPills(jName){
+  const ins=calcInsignias(jName);if(!ins.length)return'';
+  return ins.map(b=>'<span title="'+b.desc+'" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:'+b.bg+';color:'+b.color+';margin-left:4px"><i class="ti '+b.icon+'" style="font-size:10px"></i>'+b.label+'</span>').join('');
+}
+function insigniasCards(jName){
+  const ins=calcInsignias(jName);if(!ins.length)return'';
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px"><i class="ti ti-award" style="font-size:12px"></i> Insignias ('+ins.length+')</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+    ins.map(b=>'<div style="display:flex;align-items:center;gap:8px;background:'+b.bg+';border-radius:var(--r-sm);padding:8px 12px;min-width:130px">'+
+      '<div style="width:30px;height:30px;border-radius:50%;background:'+b.color+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti '+b.icon+'" style="font-size:14px;color:#fff"></i></div>'+
+      '<div><div style="font-weight:700;font-size:12px;color:var(--dark)">'+b.label+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:1px">'+b.desc+'</div></div>'+
+    '</div>').join('')+
+    '</div></div>';
+}
+
+/* ===== LISTA NEGRA ===== */
+let listaNegra=[];
+function renderListaNegra(){
+  let el=document.getElementById('lista-negra-section');
+  if(!el){const p=document.getElementById('org-jug-section');if(!p)return;el=document.createElement('div');el.id='lista-negra-section';p.parentNode.insertBefore(el,p.nextSibling);}
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;margin-bottom:10px">'+
+      '<div class="sec-label" style="margin:0;display:flex;align-items:center;gap:6px"><i class="ti ti-ban" style="color:var(--red)"></i> Lista negra'+(listaNegra.length?' <span style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700">'+listaNegra.length+'</span>':'')+'</div>'+
+      '<button onclick="abrirVetarJugador()" style="border:1px solid var(--red);background:rgba(192,57,43,.06);border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--red);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-user-off"></i> Vetar</button>'+
+    '</div>'+
+    (listaNegra.length?
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">'+
+        listaNegra.map((n,i)=>'<div class="prow" style="padding:9px 13px">'+
+          '<div style="width:32px;height:32px;border-radius:50%;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--red);flex-shrink:0">'+initials(n)+'</div>'+
+          '<span style="flex:1;font-weight:600;font-size:13px;color:var(--dark)">'+n+'</span>'+
+          '<span style="font-size:10px;color:var(--red);font-weight:700;padding:2px 8px;border-radius:99px;background:rgba(192,57,43,.1);margin-right:8px">Vetado</span>'+
+          '<button style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:13px;border-radius:6px" data-idx="'+i+'" onclick="quitarVeto(parseInt(this.dataset.idx))"><i class="ti ti-lock-open"></i></button>'+
+        '</div>').join('')+
+      '</div>':
+      '<div style="background:var(--card);border:1px dashed var(--border2);border-radius:var(--r-sm);padding:14px;text-align:center;font-size:12px;color:var(--muted)"><i class="ti ti-shield-check" style="font-size:18px;display:block;margin-bottom:6px;opacity:.4"></i>Sin jugadores vetados</div>'
+    );
+}
+function abrirVetarJugador(){
+  const known=Object.values(jugadores).map(j=>j.name).filter(n=>!listaNegra.includes(n));
+  let m=document.getElementById('modal-vetar');
+  if(!m){m=document.createElement('div');m.id='modal-vetar';m.className='modal-bg';m.innerHTML=
+    '<div class="modal"><div class="modal-handle"></div><h2>Vetar jugador</h2><p class="msub">No podrá apuntarse a ninguna convocatoria</p>'+
+    '<div class="fl" style="margin-top:0">Nombre</div><input class="fi" type="text" id="vetar-nombre" list="dl-vetar" autocomplete="off"><datalist id="dl-vetar"></datalist>'+
+    '<button class="btn-danger" style="margin-top:14px" onclick="confirmarVeto()"><i class="ti ti-ban"></i> Confirmar veto</button>'+
+    '<button class="btn-outline" onclick="closeModal(\'modal-vetar\')">Cancelar</button></div>';
+  document.body.appendChild(m);}
+  const dl=document.getElementById('dl-vetar');if(dl)dl.innerHTML=known.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">').join('');
+  const inp=document.getElementById('vetar-nombre');if(inp)inp.value='';
+  openModal('modal-vetar');setTimeout(()=>{if(inp)inp.focus();},80);
+}
+function confirmarVeto(){
+  const inp=document.getElementById('vetar-nombre');const name=(inp&&inp.value||'').trim();
+  if(!name){if(inp)inp.focus();showToast('Escribe el nombre');return;}
+  if(listaNegra.some(n=>n.trim().toLowerCase()===name.toLowerCase())){showToast('Ya está en lista negra');return;}
+  listaNegra.push(name);saveCloud();closeModal('modal-vetar');renderListaNegra();showToast(name+' vetado');
+}
+function quitarVeto(idx){
+  const n=listaNegra[idx];if(!n)return;
+  if(!confirm('Quitar el veto a '+n+'?'))return;
+  listaNegra.splice(idx,1);saveCloud();renderListaNegra();showToast('Veto eliminado: '+n);
+}
+
+/* ===== PROMOCION SUPLENTE ===== */
+function promoverSuplente(c){
+  const MT=c.MT||(c.tipo==='sala'?12:16);
+  const tit=(c.players||[]).filter(p=>p.rol==='tit');
+  const sup=(c.players||[]).filter(p=>p.rol==='sup');
+  if(tit.length<MT&&sup.length>0){
+    const idx=c.players.findIndex(p=>p.rol==='sup');
+    if(idx>=0){c.players[idx].rol='tit';c.players[idx].promotedAt=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});showToast(c.players[idx].name+' promovido a titular');return true;}
+  }
+  return false;
+}
+
+/* ===== EQUIPOS (CAMPO HORIZONTAL) ===== */
+function mostrarListaEquipos(){
+  const listEl=document.getElementById('equipos-list');
+  const campoEl=document.getElementById('equipos-campo');
+  if(!listEl||!campoEl)return;
+  campoEl.style.display='none';listEl.style.display='block';
+  const activas=convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada');
+  if(!activas.length){
+    listEl.innerHTML='<div class="empty-st" style="padding:48px 0"><i class="ti ti-layout-pitch" style="font-size:36px"></i><span class="emph" style="margin-top:4px">Sin equipos todavía</span><p>Cuando haya convocatorias activas con jugadores aparecerán aquí.</p></div>';
+    return;
+  }
+  listEl.innerHTML=activas.map(c=>{
+    const tit=getConvTit(c);
+    const eqA=(c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+    const eqB=(c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+    return '<div class="card" style="margin-bottom:12px;overflow:hidden;cursor:pointer" data-cid="'+c.id+'" onclick="abrirCampoConv(this.dataset.cid)">'+
+      '<div style="background:var(--pitch);padding:14px 16px;display:flex;align-items:center;gap:14px">'+
+        '<div style="width:42px;height:42px;border-radius:var(--r-sm);background:rgba(184,246,58,.1);border:1px solid rgba(184,246,58,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-layout-pitch" style="font-size:20px;color:var(--lime)"></i></div>'+
+        '<div style="flex:1">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;color:var(--lime);letter-spacing:.04em">'+(c.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+'</div>'+
+          '<div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:600;margin-top:2px">'+c.dia+(c.diames?' '+c.diames:'')+' · '+c.hora+'</div>'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px">'+c.lugar+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0"><span class="pill '+(c.status==='cerrada'?'pill-closed':'pill-open')+'">'+(c.status==='cerrada'?'Cerrada':'Abierta')+'</span>'+
+          '<div style="font-size:10px;color:rgba(184,246,58,.4);margin-top:5px">'+tit.length+' jugadores</div></div>'+
+      '</div>'+
+      '<div style="padding:12px 16px;display:flex;gap:10px;align-items:flex-start">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px"><div style="width:10px;height:10px;border-radius:50%;background:#f5c842;flex-shrink:0"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Eq. A — Amarillo ('+eqA.length+')</span></div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:4px">'+eqA.slice(0,4).map(n=>'<span style="font-size:10px;background:rgba(245,200,66,.12);color:#b8860b;padding:2px 7px;border-radius:99px;font-weight:600">'+n.split(' ')[0]+'</span>').join('')+(eqA.length>4?'<span style="font-size:10px;color:var(--muted)">+'+( eqA.length-4)+'</span>':'')+'</div>'+
+        '</div>'+
+        '<div style="width:1px;height:40px;background:var(--border);flex-shrink:0"></div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px"><div style="width:10px;height:10px;border-radius:50%;background:#f5822a;flex-shrink:0"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Eq. B — Naranja ('+eqB.length+')</span></div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:4px">'+eqB.slice(0,4).map(n=>'<span style="font-size:10px;background:rgba(245,130,42,.12);color:#c04800;padding:2px 7px;border-radius:99px;font-weight:600">'+n.split(' ')[0]+'</span>').join('')+(eqB.length>4?'<span style="font-size:10px;color:var(--muted)">+'+( eqB.length-4)+'</span>':'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="padding:0 16px 10px;text-align:center;font-size:12px;font-weight:600;color:var(--grass)"><i class="ti ti-eye" style="font-size:13px"></i> Ver en el campo</div>'+
+    '</div>';
+  }).join('');
+}
+
+function abrirCampoConv(cid){
+  const c=convocatorias.find(x=>x.id===cid);if(!c)return;
+  const listEl=document.getElementById('equipos-list');
+  const campoEl=document.getElementById('equipos-campo');
+  const innerEl=document.getElementById('equipos-campo-inner');
+  if(!campoEl||!innerEl)return;
+  if(listEl)listEl.style.display='none';
+  campoEl.style.display='block';
+
+  const tit=getConvTit(c);
+  const isSala=c.tipo==='sala';
+
+  const eqAnames=(c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+  const eqBnames=(c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+  let eqA=eqAnames.map(n=>tit.find(p=>p.name===n)).filter(Boolean);
+  let eqB=eqBnames.map(n=>tit.find(p=>p.name===n)).filter(Boolean);
+
+  // Auto-assign GK: if team has a portero, put them first; else first player becomes GK
+  function sortWithGK(team){
+    const gkIdx=team.findIndex(p=>p.pos==='portero'||p.pos==='portero-jugador');
+    if(gkIdx>0){const gk=team.splice(gkIdx,1)[0];team.unshift(gk);}
+    else if(gkIdx<0&&team.length>0){} // first player auto-becomes GK visually
+    return team;
+  }
+  eqA=sortWithGK([...eqA]);
+  eqB=sortWithGK([...eqB]);
+
+  const COL_A='#f5c842';const COL_B='#f5822a';
+  const COL_A_GK='#c9a000';const COL_B_GK='#c04800';
+  const PW=600;const PH=isSala?300:360;
+
+  // Tactic: F5=1-2-3, F7=1-2-3-2
+  // X zones (A on LEFT half, B on RIGHT half — clearly separated)
+  // A: GK near left goal, attacks right → x: 7%, 22%, 22%, 52%, 52%, 52%, (F7:42%,42%,42%,62%,62%)
+  // B: GK near right goal, attacks left → mirror
+  const ZA_SALA =[0.06, 0.22, 0.22, 0.44, 0.44, 0.44];
+  const ZB_SALA =[0.94, 0.78, 0.78, 0.56, 0.56, 0.56];
+  const ZA_F7   =[0.06, 0.19, 0.19, 0.33, 0.33, 0.33, 0.46, 0.46];
+  const ZB_F7   =[0.94, 0.81, 0.81, 0.67, 0.67, 0.67, 0.54, 0.54];
+  const ZA=isSala?ZA_SALA:ZA_F7;
+  const ZB=isSala?ZB_SALA:ZB_F7;
+
+  const YS_SALA=[0.50, 0.28,0.72, 0.17,0.50,0.83];
+  const YS_F7  =[0.50, 0.25,0.75, 0.17,0.50,0.83, 0.33,0.67];
+  const YS=isSala?YS_SALA:YS_F7;
+
+  const TACTIC_SALA=['Portero','Defensa','Defensa','Delantero','Delantero','Delantero'];
+  const TACTIC_F7  =['Portero','Defensa','Defensa','Centrocampista','Centrocampista','Centrocampista','Delantero','Delantero'];
+  const TACTIC=isSala?TACTIC_SALA:TACTIC_F7;
+
+  function buildTokens(team,zonesX,col,gkCol){
+    return team.slice(0,zonesX.length).map((p,i)=>({
+      x:zonesX[i]*PW, y:YS[i]*PH,
+      p, bg:i===0?gkCol:col, isGKSlot:i===0,
+      tacticPos:TACTIC[i]
+    }));
+  }
+
+  const tokA=buildTokens(eqA,ZA,COL_A,COL_A_GK);
+  const tokB=buildTokens(eqB,ZB,COL_B,COL_B_GK);
+  const R=19;
+
+  // SVG pitch (horizontal)
+  const sw=Math.round(PW/14);
+  const stripes=[...Array(14)].map((_,i)=>'<rect x="'+(i*sw)+'" y="0" width="'+sw+'" height="'+PH+'" fill="'+(i%2===0?'#1e6630':'#257035')+'"/>').join('');
+
+  const svg='<svg viewBox="0 0 '+PW+' '+PH+'" xmlns="http://www.w3.org/2000/svg" '+
+    'style="width:100%;display:block;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.3)">'+
+    stripes+
+    '<rect x="8" y="8" width="'+(PW-16)+'" height="'+(PH-16)+'" rx="6" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>'+
+    '<line x1="'+PW/2+'" y1="8" x2="'+PW/2+'" y2="'+(PH-8)+'" stroke="rgba(255,255,255,.55)" stroke-width="1.2"/>'+
+    '<circle cx="'+PW/2+'" cy="'+PH/2+'" r="'+(isSala?42:52)+'" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>'+
+    '<circle cx="'+PW/2+'" cy="'+PH/2+'" r="4" fill="rgba(255,255,255,.7)"/>'+
+    '<rect x="8" y="'+(PH/2-(isSala?50:65))+'" width="'+(isSala?80:95)+'" height="'+(isSala?100:130)+'" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>'+
+    '<rect x="8" y="'+(PH/2-25)+'" width="26" height="50" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>'+
+    '<rect x="'+(PW-8-(isSala?80:95))+'" y="'+(PH/2-(isSala?50:65))+'" width="'+(isSala?80:95)+'" height="'+(isSala?100:130)+'" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>'+
+    '<rect x="'+(PW-34)+'" y="'+(PH/2-25)+'" width="26" height="50" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1"/>'+
+    '<rect x="0" y="'+(PH/2-18)+'" width="8" height="36" rx="2" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/>'+
+    '<rect x="'+(PW-8)+'" y="'+(PH/2-18)+'" width="8" height="36" rx="2" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/>'+
+    '<circle cx="'+(isSala?76:90)+'" cy="'+PH/2+'" r="3" fill="rgba(255,255,255,.55)"/>'+
+    '<circle cx="'+(PW-(isSala?76:90))+'" cy="'+PH/2+'" r="3" fill="rgba(255,255,255,.55)"/>'+
+    [...tokA,...tokB].map(t=>{
+      const x=Math.round(t.x),y=Math.round(t.y);
+      const nm=t.p.name.split(' ')[0].substring(0,8);
+      const chosen=posLabels&&posLabels[t.p.pos]?posLabels[t.p.pos]:(t.p.pos||'');
+      return '<g>'+
+        '<circle cx="'+x+'" cy="'+y+'" r="'+R+'" fill="'+t.bg+'" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>'+
+        (t.isGKSlot?'<circle cx="'+x+'" cy="'+y+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-dasharray="3 2"/>':'')+
+        '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#111" font-family="DM Sans,sans-serif">'+initials(t.p.name)+'</text>'+
+        '<text x="'+x+'" y="'+(y+R+13)+'" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,.95)" font-family="DM Sans,sans-serif">'+nm+'</text>'+
+        (chosen?'<text x="'+x+'" y="'+(y+R+23)+'" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.5)" font-family="DM Sans,sans-serif">'+chosen+'</text>':'')+
+      '</g>';
+    }).join('')+
+    '<text x="22" y="24" font-family="Bebas Neue,sans-serif" font-size="13" fill="'+COL_A+'" letter-spacing="1">EQ. A</text>'+
+    '<text x="'+(PW-22)+'" y="24" font-family="Bebas Neue,sans-serif" font-size="13" fill="'+COL_B+'" letter-spacing="1" text-anchor="end">EQ. B</text>'+
+    '<text x="'+PW/2+'" y="'+(PH-8)+'" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.3)" font-family="DM Sans,sans-serif">'+
+      (isSala?'1-2-3':'1-2-3-2')+
+    '</text>'+
+  '</svg>';
+
+  const sinPos=tit.filter(p=>!eqAnames.includes(p.name)&&!eqBnames.includes(p.name));
+  innerEl.innerHTML=
+    '<div style="background:var(--pitch);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+      '<div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);letter-spacing:.04em">'+(isSala?'Fútbol Sala':'Fútbol 7')+'</div>'+
+        '<div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:600;margin-top:2px">'+c.dia+(c.diames?' '+c.diames:'')+' · '+c.hora+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px">'+c.lugar+'</div>'+
+      '</div>'+
+      '<span class="pill '+(c.status==='cerrada'?'pill-closed':'pill-open')+'">'+(c.status==='cerrada'?'Cerrada':'Abierta')+'</span>'+
+    '</div>'+
+    svg+
+    '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">'+
+      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px"><div style="width:12px;height:12px;border-radius:50%;background:#f5c842"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Equipo A</span></div>'+
+      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px"><div style="width:12px;height:12px;border-radius:50%;background:#f5822a"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Equipo B</span></div>'+
+      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px;font-size:11px;color:var(--muted)">Círculo punteado = Portero · Texto = posición elegida por el jugador</div>'+
+    '</div>'+
+    (sinPos.length?'<div style="margin-top:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:7px">Sin equipo asignado</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+sinPos.map(p=>'<span style="background:var(--offwhite);border-radius:99px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--dark)">'+p.name+'</span>').join('')+'</div>':'');
+}
+
+
+/* ===== CAMPO INTERACTIVO ORG ===== */
+let _campoCid = null;
+
+function abrirCampoEquipos(cid){
+  _campoCid = cid;
+  const c = convocatorias.find(x=>x.id===cid);
+  if(!c) return;
+
+  // Auto-init teams if empty
+  const tit = getConvTit(c);
+  if(!c.teamA || !c.teamA.length){
+    const mid = Math.ceil(tit.length/2);
+    c.teamA = tit.slice(0,mid).map(p=>p.name);
+    c.teamB = tit.slice(mid).map(p=>p.name);
+  }
+
+  // Update modal title
+  const titleEl = document.getElementById('campo-modal-title');
+  if(titleEl) titleEl.textContent = (c.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+' — '+c.dia+(c.diames?' '+c.diames:'')+' '+c.hora;
+
+  // Show modal
+  const modal = document.getElementById('modal-campo-equipos');
+  if(modal) modal.classList.add('open');
+
+  // Draw after modal is visible
+  setTimeout(()=>{ dibujarCampoEquipos(); }, 80);
+}
+
+function cerrarCampoEquipos(){
+  closeModal('modal-campo-equipos');
+  _campoCid = null;
+}
+
+function dibujarCampoEquipos(){
+  const c = convocatorias.find(x=>x.id===_campoCid);
+  if(!c) return;
+  const container = document.getElementById('campo-interactivo');
+  if(!container) return;
+
+  container.innerHTML = '';
+  const tit = getConvTit(c);
+  const isSala = c.tipo === 'sala';
+
+  // Make sure teams are initialised
+  if(!c.teamA||!c.teamA.length){
+    const mid=Math.ceil(tit.length/2);
+    c.teamA=tit.slice(0,mid).map(p=>p.name);
+    c.teamB=tit.slice(mid).map(p=>p.name);
+  }
+
+  const eqAnames = [...(c.teamA||[])];
+  const eqBnames = [...(c.teamB||[])];
+  const sinEquipo = tit.filter(p=>!eqAnames.includes(p.name)&&!eqBnames.includes(p.name)).map(p=>p.name);
+
+  // Sort GK first
+  function sortGK(names){
+    const players = names.map(n=>tit.find(p=>p.name===n)).filter(Boolean);
+    const gkIdx = players.findIndex(p=>p.pos==='portero'||p.pos==='portero-jugador');
+    if(gkIdx>0){const gk=players.splice(gkIdx,1)[0];players.unshift(gk);}
+    return players;
+  }
+
+  const eqA = sortGK(eqAnames);
+  const eqB = sortGK(eqBnames);
+
+  const W = container.offsetWidth || 500;
+  const H = isSala ? Math.round(W*0.55) : Math.round(W*0.65);
+  container.style.height = H+'px';
+
+  const COL_A='#f5c842', COL_B='#f5822a';
+  const COL_A_GK='#c9a000', COL_B_GK='#c04800';
+
+  // Zone positions [xFrac, yFrac]
+  const ZA_S=[[.06,.50],[.21,.28],[.21,.72],[.40,.17],[.40,.50],[.40,.83]];
+  const ZB_S=[[.94,.50],[.79,.28],[.79,.72],[.60,.17],[.60,.50],[.60,.83]];
+  const ZA_7=[[.06,.50],[.19,.25],[.19,.75],[.32,.17],[.32,.50],[.32,.83],[.45,.33],[.45,.67]];
+  const ZB_7=[[.94,.50],[.81,.25],[.81,.75],[.68,.17],[.68,.50],[.68,.83],[.55,.33],[.55,.67]];
+  const ZA = isSala?ZA_S:ZA_7;
+  const ZB = isSala?ZB_S:ZB_7;
+
+  // ── Pitch background ──────────────────────────────────────────────────
+  container.style.cssText += ';position:relative;border-radius:10px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+
+  // Stripe background
+  const nStripes = 16;
+  const sw = W/nStripes;
+  for(let i=0;i<nStripes;i++){
+    const s=document.createElement('div');
+    s.style.cssText='position:absolute;top:0;left:'+(i*sw)+'px;width:'+sw+'px;height:100%;background:'+(i%2===0?'#1e6630':'#257035');
+    container.appendChild(s);
+  }
+
+  // SVG lines overlay
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2';
+  const r1=isSala?Math.round(W*.065):Math.round(W*.08);
+  const paW=isSala?Math.round(W*.14):Math.round(W*.16);
+  const paH=isSala?Math.round(H*.34):Math.round(H*.38);
+  svg.innerHTML =
+    `<rect x="8" y="8" width="${W-16}" height="${H-16}" rx="6" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>
+     <line x1="${W/2}" y1="8" x2="${W/2}" y2="${H-8}" stroke="rgba(255,255,255,.5)" stroke-width="1.2"/>
+     <circle cx="${W/2}" cy="${H/2}" r="${r1}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>
+     <circle cx="${W/2}" cy="${H/2}" r="4" fill="rgba(255,255,255,.65)"/>
+     <rect x="8" y="${H/2-paH/2}" width="${paW}" height="${paH}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>
+     <rect x="8" y="${H/2-H*.09}" width="${W*.044}" height="${H*.18}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+     <rect x="${W-8-paW}" y="${H/2-paH/2}" width="${paW}" height="${paH}" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>
+     <rect x="${W-8-W*.044}" y="${H/2-H*.09}" width="${W*.044}" height="${H*.18}" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+     <rect x="0" y="${H/2-H*.07}" width="8" height="${H*.14}" rx="2" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/>
+     <rect x="${W-8}" y="${H/2-H*.07}" width="8" height="${H*.14}" rx="2" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/>
+     <circle cx="${W*.13}" cy="${H/2}" r="3" fill="rgba(255,255,255,.5)"/>
+     <circle cx="${W*.87}" cy="${H/2}" r="3" fill="rgba(255,255,255,.5)"/>
+     <text x="18" y="22" font-family="Bebas Neue,sans-serif" font-size="13" fill="${COL_A}" letter-spacing="1">EQ. A</text>
+     <text x="${W-18}" y="22" font-family="Bebas Neue,sans-serif" font-size="13" fill="${COL_B}" letter-spacing="1" text-anchor="end">EQ. B</text>
+     <text x="${W/2}" y="${H-6}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.25)" font-family="DM Sans,sans-serif">${isSala?'1-2-3':'1-2-3-2'}</text>`;
+  container.appendChild(svg);
+
+  // ── Drop zones (left=A, right=B) ──────────────────────────────────────
+  ['A','B'].forEach(team=>{
+    const dz = document.createElement('div');
+    dz.dataset.dropTeam = team;
+    dz.style.cssText = 'position:absolute;top:0;'+(team==='A'?'left:0':'right:0')+
+      ';width:50%;height:100%;z-index:3;pointer-events:auto';
+    dz.addEventListener('dragover', e=>{
+      e.preventDefault();
+      dz.style.background = team==='A'?'rgba(245,200,66,.08)':'rgba(245,130,42,.08)';
+    });
+    dz.addEventListener('dragleave', ()=>{ dz.style.background='none'; });
+    dz.addEventListener('drop', e=>{
+      e.preventDefault(); dz.style.background='none';
+      try{
+        const d = JSON.parse(e.dataTransfer.getData('application/json'));
+        if(d.cid!==_campoCid) return;
+        if(d.team!==team) moverJugadorEquipo(d.name, team);
+      }catch(err){}
+    });
+    container.appendChild(dz);
+  });
+
+  // ── Selected state ────────────────────────────────────────────────────
+  let selected = null;
+
+  // ── Player tokens ─────────────────────────────────────────────────────
+  const R = Math.max(18, Math.round(W*0.042));
+
+  function crearToken(p, zone, col, gkCol, isGK, team){
+    const x = Math.round(zone[0]*W);
+    const y = Math.round(zone[1]*H);
+    const bg = isGK ? gkCol : col;
+    const chosen = posLabels&&posLabels[p.pos]?posLabels[p.pos]:(p.pos||'');
+
+    // Wrapper (for label positioning)
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `position:absolute;left:${x-R}px;top:${y-R}px;width:${R*2}px;z-index:10;cursor:grab;user-select:none`;
+    wrap.draggable = true;
+
+    // Circle
+    const circle = document.createElement('div');
+    circle.style.cssText =
+      `width:${R*2}px;height:${R*2}px;border-radius:50%;background:${bg};`+
+      `border:2.5px solid rgba(255,255,255,.55);display:flex;align-items:center;`+
+      `justify-content:center;flex-direction:column;transition:transform .15s,box-shadow .15s;`+
+      (isGK?`outline:2.5px dashed rgba(255,255,255,.75);outline-offset:2px;`:'');
+    circle.innerHTML = `<span style="font-size:${Math.round(R*.55)}px;font-weight:800;color:#111;line-height:1">${initials(p.name)}</span>`;
+    wrap.appendChild(circle);
+
+    // Name label
+    const nameLbl = document.createElement('div');
+    nameLbl.style.cssText =
+      `text-align:center;font-size:9px;font-weight:700;color:rgba(255,255,255,.95);`+
+      `text-shadow:0 1px 3px rgba(0,0,0,.9);margin-top:3px;white-space:nowrap;`+
+      `overflow:hidden;text-overflow:ellipsis;max-width:${R*2+8}px;margin-left:-4px`;
+    nameLbl.textContent = p.name.split(' ')[0].substring(0,8);
+    wrap.appendChild(nameLbl);
+
+    // Pos label
+    const posLbl = document.createElement('div');
+    posLbl.style.cssText =
+      `text-align:center;font-size:7.5px;color:rgba(255,255,255,.5);`+
+      `text-shadow:0 1px 2px rgba(0,0,0,.8);margin-top:1px;white-space:nowrap`;
+    posLbl.textContent = chosen;
+    wrap.appendChild(posLbl);
+
+    // Drag events
+    wrap.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('application/json', JSON.stringify({name:p.name,team,cid:_campoCid}));
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(()=>{ wrap.style.opacity='0.45'; },0);
+    });
+    wrap.addEventListener('dragend', ()=>{ wrap.style.opacity='1'; wrap.style.cursor='grab'; });
+
+    // Click/tap to select & swap
+    wrap.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(selected && selected.name!==p.name){
+        // Swap teams
+        intercambiarJugadores(selected.name, selected.team, p.name, team);
+        selected = null;
+        return;
+      }
+      selected = selected&&selected.name===p.name ? null : {name:p.name,team};
+      // Highlight all tokens
+      container.querySelectorAll('.org-token-circle').forEach(el=>{
+        const isSelected = el.dataset.name===p.name && selected;
+        el.style.boxShadow = isSelected ? '0 0 0 3px #fff, 0 0 14px rgba(255,255,255,.7)' : 'none';
+        el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)';
+      });
+    });
+    circle.dataset.name = p.name;
+    circle.classList.add('org-token-circle');
+
+    container.appendChild(wrap);
+  }
+
+  eqA.forEach((p,i)=>{ if(i<ZA.length) crearToken(p,ZA[i],COL_A,COL_A_GK,i===0,'A'); });
+  eqB.forEach((p,i)=>{ if(i<ZB.length) crearToken(p,ZB[i],COL_B,COL_B_GK,i===0,'B'); });
+
+  // Click on field = deselect
+  container.addEventListener('click', ()=>{
+    selected = null;
+    container.querySelectorAll('.org-token-circle').forEach(el=>{
+      el.style.boxShadow='none'; el.style.transform='scale(1)';
+    });
+  });
+
+  // ── Sin equipo ────────────────────────────────────────────────────────
+  const sinEl = document.getElementById('campo-sin-equipo');
+  if(sinEl){
+    const sinPlayers = tit.filter(p=>!eqAnames.includes(p.name)&&!eqBnames.includes(p.name));
+    if(sinPlayers.length){
+      sinEl.style.display='block';
+      sinEl.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Sin equipo asignado</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        sinPlayers.map(p=>`<button onclick="asignarSinEquipo('${p.name.replace(/'/g,"\\'")}','A')" `+
+          `style="background:var(--offwhite);border:1px solid var(--border2);border-radius:99px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--dark);cursor:pointer;font-family:'DM Sans',sans-serif">`+
+          `${p.name} <span style="color:var(--muted);font-size:10px">→ Eq.A</span></button>`).join('')+
+        '</div>';
+    }else{
+      sinEl.style.display='none';
+    }
+  }
+}
+
+function moverJugadorEquipo(name, destTeam){
+  const c = convocatorias.find(x=>x.id===_campoCid);if(!c)return;
+  if(!c.teamA)c.teamA=[];if(!c.teamB)c.teamB=[];
+  c.teamA = c.teamA.filter(n=>n!==name);
+  c.teamB = c.teamB.filter(n=>n!==name);
+  if(destTeam==='A') c.teamA.push(name); else c.teamB.push(name);
+  saveCloud();
+  showToast(name.split(' ')[0]+' → Eq.'+destTeam);
+  dibujarCampoEquipos();
+}
+
+function intercambiarJugadores(nameA, teamA, nameB, teamB){
+  if(teamA===teamB){ showToast('Mismo equipo'); return; }
+  const c = convocatorias.find(x=>x.id===_campoCid);if(!c)return;
+  if(!c.teamA)c.teamA=[];if(!c.teamB)c.teamB=[];
+  c.teamA = c.teamA.filter(n=>n!==nameA&&n!==nameB);
+  c.teamB = c.teamB.filter(n=>n!==nameA&&n!==nameB);
+  if(teamA==='A') c.teamB.push(nameA); else c.teamA.push(nameA);
+  if(teamB==='A') c.teamB.push(nameB); else c.teamA.push(nameB);
+  saveCloud();
+  showToast(nameA.split(' ')[0]+' ↔ '+nameB.split(' ')[0]);
+  dibujarCampoEquipos();
+  renderOrgPanel();
+}
+
+function resetEquipos(){
+  const c=convocatorias.find(x=>x.id===_campoCid);if(!c)return;
+  const tit=getConvTit(c),mid=Math.ceil(tit.length/2);
+  c.teamA=tit.slice(0,mid).map(p=>p.name);
+  c.teamB=tit.slice(mid).map(p=>p.name);
+  saveCloud();dibujarCampoEquipos();renderOrgPanel();
+  showToast('Equipos reiniciados');
+}
+
+function asignarSinEquipo(name, team){
+  const c = convocatorias.find(x=>x.id===_campoCid);if(!c)return;
+  if(!c.teamA)c.teamA=[];if(!c.teamB)c.teamB=[];
+  if(team==='A') c.teamA.push(name); else c.teamB.push(name);
+  saveCloud(); dibujarCampoEquipos(); renderOrgPanel();
+  showToast(name.split(' ')[0]+' → Eq.'+team);
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -3410,6 +4052,7 @@ function renderDashboard(){
 window.addEventListener('load',function(){
   patchShowScreen();
   patchConfirmarInsc();
+  setTimeout(()=>hideSplash(),5000);
   loadCloud().then(function(){
     syncCalFromConvs();
     renderInicioMulti();
@@ -3420,6 +4063,7 @@ window.addEventListener('load',function(){
     populateDL();
     startTimerTick();
     startRealtime();
+    hideSplash();
   });
 });
 
@@ -3497,6 +4141,49 @@ window.addEventListener('load',function(){
       <button class="pin-key" onclick="pinCambioDel()" style="grid-column:3;font-size:18px;color:var(--muted)"><i class="ti ti-backspace"></i></button>
     </div>
     <button class="btn-outline" onclick="closeModal('modal-cambiar-pin');resetPinCambio()">Cancelar</button>
+  </div>
+</div>
+
+
+<!-- Modal campo equipos -->
+<div id="modal-campo-equipos" class="modal-bg" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:620px;padding:16px 16px 24px">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <h2 style="margin:0;font-size:18px">Hacer equipos</h2>
+        <p class="msub" style="margin:2px 0 0" id="campo-modal-title">—</p>
+      </div>
+      <button onclick="cerrarCampoEquipos()" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:22px;padding:4px"><i class="ti ti-x"></i></button>
+    </div>
+    <!-- Legend -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:5px;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.25);border-radius:99px;padding:4px 10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#f5c842"></div>
+        <span style="font-size:11px;font-weight:700;color:#b8860b">Equipo A</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;background:rgba(245,130,42,.1);border:1px solid rgba(245,130,42,.25);border-radius:99px;padding:4px 10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:#f5822a"></div>
+        <span style="font-size:11px;font-weight:700;color:#c04800">Equipo B</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;padding:4px 0">
+        <i class="ti ti-tap" style="font-size:12px"></i>
+        <span>Pulsa 2 jugadores para intercambiarlos · Arrastra al otro lado</span>
+      </div>
+    </div>
+    <!-- Field -->
+    <div id="campo-interactivo" style="width:100%;border-radius:10px;overflow:hidden;margin-bottom:12px"></div>
+    <!-- Sin equipo -->
+    <div id="campo-sin-equipo" style="display:none;margin-bottom:12px"></div>
+    <!-- Actions -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-green" style="flex:1" onclick="cerrarCampoEquipos();renderOrgPanel()">
+        <i class="ti ti-check"></i> Guardar equipos
+      </button>
+      <button class="btn-outline" style="flex:0" onclick="resetEquipos()">
+        <i class="ti ti-refresh"></i> Reiniciar
+      </button>
+    </div>
   </div>
 </div>
 
