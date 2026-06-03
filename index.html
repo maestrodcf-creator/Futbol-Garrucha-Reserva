@@ -678,13 +678,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
             <div style="display:flex;gap:8px" id="tipo-grp-new">
               <div class="tipo-card sel" onclick="selTipoNewLocal(this,'sala')">
                 <i class="ti ti-ball-football" style="font-size:20px;display:block;margin-bottom:4px"></i>
-                <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em">Fútbol Sala</div>
-                <div style="font-size:10px;color:var(--muted)">5+5 titulares</div>
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em">Fútbol Sala — F5</div>
+                <div style="font-size:10px;color:var(--muted)">6 por equipo · 12 total</div>
               </div>
               <div class="tipo-card" onclick="selTipoNewLocal(this,'f7')">
                 <i class="ti ti-ball-football" style="font-size:20px;display:block;margin-bottom:4px"></i>
                 <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.04em">Fútbol 7</div>
-                <div style="font-size:10px;color:var(--muted)">6+6 titulares</div>
+                <div style="font-size:10px;color:var(--muted)">7 jugadores por equipo</div>
               </div>
             </div>
           </div>
@@ -739,12 +739,19 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
           <!-- Cierre automático -->
           <div class="card-section">
-            <div class="fl" style="margin-top:0">Cierre automático (opcional)</div>
+            <div class="fl" style="margin-top:0;display:flex;align-items:center;gap:6px">
+              Cierre anticipado
+              <span style="font-size:10px;color:var(--muted);font-weight:400">(opcional — por defecto se cierra a la hora del partido)</span>
+            </div>
             <div style="display:flex;gap:8px">
-              <input class="fi" type="date" id="new-cierre-fecha" style="flex:1">
+              <input class="fi" type="date" id="new-cierre-fecha" style="flex:1" placeholder="Solo si quieres cerrar antes">
               <input class="fi" type="time" id="new-cierre-hora" value="20:00" style="width:108px">
             </div>
-            <p style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5">Las inscripciones se cerrarán automáticamente en esa fecha y hora.</p>
+            <p style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5">
+  <i class="ti ti-info-circle" style="font-size:11px"></i>
+  Las inscripciones se cierran automáticamente a la hora de inicio del partido.
+  Usa los campos de arriba para forzar un cierre anterior si lo necesitas.
+</p>
             <button class="btn-green" style="margin-top:10px" onclick="crearNuevaConv()">
               <i class="ti ti-plus"></i> Crear convocatoria
             </button>
@@ -1014,7 +1021,7 @@ function crearConvocatoria(){
   const lugar=document.getElementById('new-lugar').value.trim();
   if(!lugar){document.getElementById('new-lugar').focus();showToast('Indica el nombre del campo');return}
   const dia=document.getElementById('new-dia').value,hora=document.getElementById('new-hora').value;
-  MAX_T=selTipoNew_==='sala'?12:16;
+  MAX_T=selTipoNew_==='sala'?12:14;
   convocatoria={tipo:selTipoNew_,dia,hora,lugar,
     maps:document.getElementById('new-maps').value.trim(),
     coste:document.getElementById('new-coste').value,
@@ -1788,11 +1795,34 @@ function crearNuevaConv(){
   const coste=(document.getElementById('new-coste')||{}).value||'';
   const pagar=(document.getElementById('new-pagar')||{}).value||'';
   const notas=(document.getElementById('new-notas')||{}).value||'';
+  // Auto-calculate cierreAt from match day+time
+  // Build the next occurrence of the selected weekday at match hora
+  const DIAS_MAP={'Lunes':1,'Martes':2,'Miércoles':3,'Jueves':4,'Viernes':5,'Sábado':6,'Domingo':0};
+  let cierreAt = null;
+  if(hora && dia){
+    const [hh,mm] = hora.split(':').map(Number);
+    const now = new Date();
+    const targetDay = DIAS_MAP[dia] !== undefined ? DIAS_MAP[dia] : -1;
+    let matchDate = new Date(now);
+    if(diames){
+      // Use explicit day of month
+      const dm = parseInt(diames);
+      matchDate.setDate(dm);
+      if(matchDate < now) matchDate.setMonth(matchDate.getMonth()+1);
+    } else if(targetDay >= 0){
+      // Find next occurrence of that weekday
+      const daysAhead = (targetDay - now.getDay() + 7) % 7 || 7;
+      matchDate.setDate(now.getDate() + daysAhead);
+    }
+    matchDate.setHours(hh, mm, 0, 0);
+    cierreAt = matchDate.toISOString();
+  }
+  // Allow manual override if set
   const cf=(document.getElementById('new-cierre-fecha')||{}).value||'';
   const ch=(document.getElementById('new-cierre-hora')||{}).value||'';
-  const cierreAt=cf&&ch?new Date(cf+'T'+ch).toISOString():null;
+  if(cf&&ch) cierreAt = new Date(cf+'T'+ch).toISOString();
   const tipo=selTipoNew_local;
-  const MT=tipo==='sala'?12:16;
+  const MT=tipo==='sala'?12:14;
   const id='cv_'+Date.now();
   convocatorias.push({id,tipo,dia,diames,hora,lugar:lugar.trim(),maps:maps.trim(),coste,pagar:pagar.trim(),notas:notas.trim(),cierreAt,status:'abierta',MT,players:[],talvez:[],teamA:[],teamB:[],asistencia:{},createdAt:new Date().toISOString()});
   ['new-lugar','new-maps','new-coste','new-pagar','new-notas','new-diames','new-cierre-fecha'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
@@ -1836,7 +1866,7 @@ function renderInicioMulti(){
     return;
   }
   el.innerHTML=activas.map(c=>{
-    const tit=getConvTit(c),MT=c.MT||(c.tipo==='sala'?12:16);
+    const tit=getConvTit(c),MT=c.MT||(c.tipo==='sala'?12:14);
     const pct=Math.round(tit.length/MT*100);
     const pc=pct>=90?'var(--red)':pct>=60?'#d4870a':'var(--grass)';
     const myE=_myName&&c.players&&c.players.find(p=>p.name===_myName);
@@ -1945,7 +1975,7 @@ function confirmarInscMulti(){
     showToast('Apuntado como Tal vez');return;
   }
   if(selConf_==='no'){closeModal('modal-insc');showToast('Anotado como No puedo ir');return;}
-  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:16);
+  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:14);
   let rol;
   if(tit.length<MT)rol='tit';
   else if(sup.length<2)rol='sup';
@@ -1973,7 +2003,7 @@ function verListaConv(cid){
   const tit=getConvTit(c);
   const sup=getConvSup(c);
   const tv=getConvTV(c);
-  const MT=c.MT||(c.tipo==='sala'?12:16);
+  const MT=c.MT||(c.tipo==='sala'?12:14);
   const pct=Math.round(tit.length/MT*100);
   const pc=pct>=90?'var(--red)':pct>=60?'var(--amber)':'var(--grass)';
 
@@ -2087,128 +2117,188 @@ function adjScConv(cid,t,d){
 }
 
 function renderOrgPanel(){
-  const el=document.getElementById('org-convs-list');
-  if(!el)return;
-  populateDL();
-  const activas=convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada');
-  if(!activas.length){
-    el.innerHTML='<div class="card"><div class="card-section"><div class="empty-st" style="padding:20px"><i class="ti ti-calendar-off"></i><p>Sin convocatorias. Crea una a la izquierda.</p></div></div></div>';
-    renderOrgJug();return;
+  const el = document.getElementById('org-panel');
+  if(!el) return;
+
+  const activas = convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada');
+
+  // ═══════════════════════════════════════════════════════════════
+  // ZONA 1 — CREAR NUEVA CONVOCATORIA
+  // ═══════════════════════════════════════════════════════════════
+  // (already rendered by the static HTML form)
+
+  // ═══════════════════════════════════════════════════════════════
+  // ZONA 2 — CONVOCATORIAS ACTIVAS Y PASADAS
+  // ═══════════════════════════════════════════════════════════════
+  const zonaConvs = document.getElementById('org-convs-list');
+  if(zonaConvs){
+    if(!activas.length){
+      zonaConvs.innerHTML =
+        '<div class="empty-st" style="padding:20px 0"><i class="ti ti-calendar-off"></i>'+
+        '<p>No hay convocatorias activas</p></div>';
+    } else {
+      zonaConvs.innerHTML = activas.map(c=>{
+        const cid   = c.id;
+        const tit   = getConvTit(c);
+        const sup   = getConvSup(c);
+        const MT    = c.MT||(c.tipo==='sala'?12:14);
+        const abierta = c.status==='abierta';
+        const cerrada = c.status==='cerrada';
+
+        // Team summary
+        const eqA = (c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+        const eqB = (c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+
+        return (
+          // ── Card ──────────────────────────────────────────────────────
+          '<div class="card" style="margin-bottom:14px;overflow:hidden">'+
+
+            // Header
+            '<div style="background:var(--pitch);padding:12px 14px;display:flex;align-items:center;gap:12px">'+
+              '<div style="flex:1">'+
+                '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);letter-spacing:.04em">'+
+                  (c.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+
+                '</div>'+
+                '<div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:600;margin-top:1px">'+
+                  c.dia+(c.diames?' '+c.diames:'')+' · '+c.hora+(c.lugar?' · '+c.lugar:'')+
+                '</div>'+
+                (c.notas?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+c.notas+'</div>':'')+
+              '</div>'+
+              '<span class="pill '+(abierta?'pill-open':'pill-closed')+'">'+(abierta?'Abierta':'Cerrada')+'</span>'+
+            '</div>'+
+
+            '<div style="padding:12px 14px">'+
+
+              // ── Stats bar ───────────────────────────────────────────────
+              '<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">'+
+                '<span style="font-size:12px;color:var(--dark)"><i class="ti ti-users" style="color:var(--grass)"></i> <strong>'+tit.length+'/'+MT+'</strong> titulares</span>'+
+                (sup.length?'<span style="font-size:12px;color:var(--muted)"><i class="ti ti-user-plus"></i> '+sup.length+' suplente'+(sup.length>1?'s':'')+'</span>':'')+
+                (c.coste?'<span style="font-size:12px;color:var(--muted)"><i class="ti ti-coin"></i> '+c.coste+'€</span>':'')+
+                (timerHtml(c)?'':'')+
+              '</div>'+
+
+              // ── Timer ───────────────────────────────────────────────────
+              timerHtml(c)+
+              // Show auto-close time
+              (c.cierreAt&&c.status==='abierta'?
+                '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">'+
+                  '<i class="ti ti-clock" style="font-size:11px"></i> Inscripciones cierran: '+
+                  new Date(c.cierreAt).toLocaleString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+
+                '</div>':'')+
+
+              // ── Action buttons ──────────────────────────────────────────
+              '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgToggleStatus(this.dataset.cid)">'+
+                  '<i class="ti ti-'+(cerrada?'lock-open':'lock')+'"></i> '+(cerrada?'Reabrir':'Cerrar')+
+                '</button>'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)" style="color:var(--blue)">'+
+                  '<i class="ti ti-pencil"></i> Editar'+
+                '</button>'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)" style="color:#b8860b">'+
+                  '<i class="ti ti-layout-pitch"></i> Equipos'+
+                '</button>'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgAbrirAsistencia(this.dataset.cid)">'+
+                  '<i class="ti ti-clipboard-check"></i> Asistencia'+
+                '</button>'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgLimpiarConv(this.dataset.cid)" style="color:var(--muted)">'+
+                  '<i class="ti ti-eraser"></i> Limpiar'+
+                '</button>'+
+                '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgCancelarConv(this.dataset.cid)">'+
+                  '<i class="ti ti-x"></i> Cancelar'+
+                '</button>'+
+              '</div>'+
+
+              // ── REGISTRO PARTIDO (zona destacada si cerrada) ─────────────
+              (cerrada?
+                '<div style="background:rgba(34,136,61,.07);border:1.5px solid var(--grass);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:12px">'+
+                  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+                    '<div style="width:30px;height:30px;border-radius:var(--r-sm);background:var(--grass);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+                      '<i class="ti ti-ball-football" style="font-size:15px;color:#fff"></i>'+
+                    '</div>'+
+                    '<div>'+
+                      '<div style="font-weight:700;font-size:13px;color:var(--dark)">Registrar partido jugado</div>'+
+                      '<div style="font-size:11px;color:var(--muted)">Mete resultado, goles, asistencias y tarjetas</div>'+
+                    '</div>'+
+                  '</div>'+
+                  '<button class="btn-green" style="width:100%" data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)">'+
+                    '<i class="ti ti-clipboard-plus"></i> Abrir registro del partido'+
+                  '</button>'+
+                '</div>':
+                ''
+              )+
+
+              // ── Inscritos ───────────────────────────────────────────────
+              '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">'+
+                'Inscritos ('+tit.length+'/'+MT+')'+
+              '</div>'+
+              (tit.length?
+                '<div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px">'+
+                  tit.map((p,i)=>{
+                    const eq = (c.teamA||[]).includes(p.name)?'A':(c.teamB||[]).includes(p.name)?'B':'?';
+                    return '<div class="prow" style="padding:7px 12px">'+
+                      '<span style="width:18px;font-size:11px;color:var(--muted);font-weight:700;flex-shrink:0">'+(i+1)+'</span>'+
+                      '<div style="width:28px;height:28px;border-radius:50%;background:'+(eq==='A'?'rgba(245,200,66,.2)':eq==='B'?'rgba(245,130,42,.2)':'var(--offwhite)')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--dark);flex-shrink:0">'+
+                        initials(p.name)+
+                      '</div>'+
+                      '<span style="flex:1;font-weight:600;font-size:13px;color:var(--dark)">'+p.name+'</span>'+
+                      (eq!=='?'?'<span style="font-size:10px;font-weight:700;color:'+(eq==='A'?'#b8860b':'#c04800')+';padding:2px 7px;border-radius:99px;background:'+(eq==='A'?'rgba(245,200,66,.15)':'rgba(245,130,42,.15)')+'">Eq.'+eq+'</span>':'')+
+                      // Pago
+                      '<button data-cid="'+cid+'" data-pn="'+p.name.replace(/"/g,'&quot;')+'" onclick="togglePago(this.dataset.cid,this.dataset.pn)" '+
+                        'style="margin-left:6px;border:1px solid '+((pagos[cid]||{})[p.name]?'var(--grass)':'var(--border2)')+
+                        ';background:'+((pagos[cid]||{})[p.name]?'rgba(34,136,61,.1)':'none')+
+                        ';border-radius:99px;cursor:pointer;padding:2px 8px;font-size:10px;font-weight:700;color:'+((pagos[cid]||{})[p.name]?'var(--grass)':'var(--muted)')+'">'+
+                        ((pagos[cid]||{})[p.name]?'✓ Pagado':'Pendiente')+
+                      '</button>'+
+                      '<button data-cid="'+cid+'" data-rol="tit" data-idx="'+i+'" onclick="orgEliminarInscrito(this.dataset.cid,this.dataset.rol,parseInt(this.dataset.idx))" '+
+                        'style="border:none;background:none;cursor:pointer;color:var(--red);padding:4px 6px;font-size:13px;margin-left:2px">'+
+                        '<i class="ti ti-x"></i>'+
+                      '</button>'+
+                    '</div>';
+                  }).join('')+
+                '</div>':
+                '<div style="font-size:12px;color:var(--muted);padding:8px 0 12px">Sin titulares apuntados</div>'
+              )+
+
+              // Suplentes
+              (sup.length?
+                '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Suplentes</div>'+
+                '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'+
+                  sup.map((p,i)=>
+                    '<div style="display:flex;align-items:center;gap:5px;background:var(--offwhite);border-radius:99px;padding:3px 6px 3px 10px;font-size:11px">'+
+                      '<span style="font-weight:600;color:var(--dark)">'+p.name+'</span>'+
+                      '<button data-cid="'+cid+'" data-rol="sup" data-idx="'+i+'" onclick="orgEliminarInscrito(this.dataset.cid,this.dataset.rol,parseInt(this.dataset.idx))" '+
+                        'style="border:none;background:none;cursor:pointer;color:var(--muted);padding:2px;font-size:12px">'+
+                        '<i class="ti ti-x"></i>'+
+                      '</button>'+
+                    '</div>'
+                  ).join('')+
+                '</div>':''
+              )+
+
+              // Pagos resumen
+              (tit.length?
+                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
+                  '<span style="font-size:11px;color:var(--muted)">'+getPagoResumen(cid,tit)+'</span>'+
+                  '<button onclick="marcarTodosPagado(\''+cid+'\')" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--grass);font-weight:600;font-family:\'DM Sans\',sans-serif">Marcar todos ✓</button>'+
+                '</div>':''
+              )+
+
+            '</div>'+ // /padding
+
+          '</div>' // /card
+        );
+      }).join('');
+    }
   }
-  el.innerHTML=activas.map(c=>{
-    const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:16);
-    const pct=Math.round(tit.length/MT*100);
-    const pc=pct>=90?'var(--red)':pct>=60?'#d4870a':'var(--grass)';
-    const cid=c.id;
-    const sc=convScores[cid]||{a:0,b:0};
-    return '<div class="org-conv-card">'+
-      '<div class="org-conv-header">'+
-        '<div style="flex:1">'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:.04em;color:var(--lime)">'+(c.tipo==='sala'?'Futbol Sala':'Futbol 7')+'</div>'+
-          '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:1px">'+c.dia+(c.diames?' '+c.diames+'.':'')+' &middot; '+c.hora+' &middot; '+c.lugar+'</div>'+
-        '</div>'+
-        '<span class="pill '+(c.status==='cerrada'?'pill-closed':'pill-open')+'">'+(c.status==='cerrada'?'Cerrada':'Abierta')+'</span>'+
-      '</div>'+
-      '<div style="padding:10px 14px">'+
-        '<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+pc+'"></div></div>'+
-        '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--muted);margin-bottom:10px">'+
-          '<span>'+tit.length+'/'+MT+' titulares &middot; '+sup.length+'/2 suplentes</span>'+
-          '<span>'+(pct>=90?'\uD83D\uDD34':pct>=60?'\uD83D\uDFE1':'\uD83D\uDFE2')+'</span>'+
-        '</div>'+
-        /* Buttons */
-        '<div class="org-btn-row" style="margin-bottom:12px">'+
-          '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgToggleStatus(this.dataset.cid)"><i class="ti ti-lock"></i> '+(c.status==='cerrada'?'Reabrir':'Cerrar')+'</button>'+
-          '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)" style="color:var(--blue)"><i class="ti ti-pencil"></i> Editar</button>'+
-          '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgCancelarConv(this.dataset.cid)"><i class="ti ti-x"></i> Cancelar</button>'+
-          '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgLimpiarConv(this.dataset.cid)"><i class="ti ti-eraser"></i> Limpiar</button>'+
-        '</div>'+
-        /* Inscritos */
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Inscritos ('+tit.length+')</div>'+
-        '<div style="margin-bottom:12px">'+
-          ([...tit,...sup,...(c.talvez||[])].length?
-            [...tit.map((p,i)=>({...p,_r:'tit',_i:i})),...sup.map((p,i)=>({...p,_r:'sup',_i:i})),
-             ...(c.talvez||[]).map((p,i)=>({...p,_r:'tv',_i:i}))].map(p=>
-              '<div class="prow" style="padding:6px 0">'+
-                '<div class="avatar '+(p._r==='tit'?'av-tit':p._r==='sup'?'av-sup':'av-tv')+'">'+initials(p.name)+'</div>'+
-                '<span class="pname" style="flex:1">'+p.name+'</span>'+
-                '<span class="badge '+(p._r==='tit'?'btit':p._r==='sup'?'bsup':'btv')+'">'+(p._r==='tit'?'Titular':p._r==='sup'?'Suplente':'Tal vez')+'</span>'+
-                '<button style="border:none;background:none;cursor:pointer;color:var(--red);padding:5px;font-size:14px;margin-left:4px;border-radius:5px" '+
-                  'data-cid="'+cid+'" data-r="'+p._r+'" data-i="'+p._i+'" onclick="orgEliminarInscrito(this.dataset.cid,this.dataset.r,parseInt(this.dataset.i))">'+
-                  '<i class="ti ti-trash"></i></button>'+
-              '</div>'
-            ).join(''):
-            '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin inscritos</div>'
-          )+
-        '</div>'+
-        /* Equipos */
-        (tit.length?
-          '<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:4px">'+
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-              '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Equipos</div>'+
-              '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)" style="display:flex;align-items:center;gap:5px;padding:6px 12px;font-size:12px;font-weight:600;background:rgba(34,136,61,.08);border:1px solid var(--grass);border-radius:var(--r-sm);cursor:pointer;color:var(--grass)">'+
-                '<i class="ti ti-layout-pitch" style="font-size:14px"></i> Abrir campo y hacer equipos'+
-              '</button>'+
-            '</div>'+
-            // Show current team summary
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
-              '<div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:var(--r-sm);padding:8px 10px">'+
-                '<div style="font-size:9px;font-weight:700;color:#b8860b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">🟡 Equipo A</div>'+
-                ((c.teamA&&c.teamA.length)?c.teamA.map(n=>'<div style="font-size:11px;color:var(--dark);padding:1px 0">'+n+'</div>').join(''):'<div style="font-size:10px;color:var(--muted)">Sin asignar</div>')+
-              '</div>'+
-              '<div style="background:rgba(245,130,42,.08);border:1px solid rgba(245,130,42,.2);border-radius:var(--r-sm);padding:8px 10px">'+
-                '<div style="font-size:9px;font-weight:700;color:#c04800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">🟠 Equipo B</div>'+
-                ((c.teamB&&c.teamB.length)?c.teamB.map(n=>'<div style="font-size:11px;color:var(--dark);padding:1px 0">'+n+'</div>').join(''):'<div style="font-size:10px;color:var(--muted)">Sin asignar</div>')+
-              '</div>'+
-            '</div>'+
-          '</div>':''
-        )+
-        /* PAGOS */
-        '<div style="border-top:1px solid var(--border);padding:12px 0 0">'+
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Control de pagos</div>'+
-          (tit.length?
-            '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'+
-              tit.map(p=>{
-                const paid=(pagos[cid]||{})[p.name];
-                return '<button '+
-                  'data-cid="'+cid+'" data-pn="'+p.name.replace(/"/g,'&quot;')+'" '+
-                  'onclick="togglePago(this.dataset.cid,this.dataset.pn)" '+
-                  'style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid '+(paid?'var(--grass)':'rgba(0,0,0,.15)')+';background:'+(paid?'rgba(34,136,61,.1)':'none')+';color:'+(paid?'var(--grass)':'var(--muted)')+'">'+
-                  '<i class="ti ti-'+(paid?'check':'circle')+'"></i> '+p.name.split(' ')[0]+
-                '</button>';
-              }).join('')+
-            '</div>'+
-            '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted)">'+
-              '<span id="pago-resumen-'+cid+'">'+
-                (()=>{const pp=pagos[cid]||{};const n=tit.filter(p=>pp[p.name]).length;return n+'/'+tit.length+' pagado'+(n!==1?'s':'');})() +
-              '</span>'+
-              '<button data-cid="'+cid+'" onclick="marcarTodosPagado(this.dataset.cid)" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--grass);font-weight:600;text-decoration:underline">Marcar todos</button>'+
-            '</div>':
-            '<div style="font-size:12px;color:var(--muted)">Sin titulares apuntados</div>'
-          )+
-        '</div>'+
 
-      '</div>'+ /* /padding */
-
-      // ── Registro partido ─────────────────────────────────────────────
-      +(c.status==='cerrada'?
-        '<div style="border-top:2px solid var(--grass);padding:12px 14px;background:rgba(34,136,61,.04)">'+
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--grass);margin-bottom:8px">'+
-            '<i class="ti ti-clipboard-plus" style="font-size:12px"></i> Partido jugado — registrar datos'+
-          '</div>'+
-          '<button class="btn-green" style="width:100%" data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)">'+
-            '<i class="ti ti-ball-football"></i> Meter resultado, goles y estadísticas'+
-          '</button>'+
-        '</div>'
-      :'')
-
-    '</div>'; /* /org-conv-card */
-  }).join('');
+  // ═══════════════════════════════════════════════════════════════
+  // ZONA 3 — JUGADORES Y LISTA NEGRA (rendered separately)
+  // ═══════════════════════════════════════════════════════════════
   renderOrgJug();
   renderListaNegra();
   renderPlantillas();
   syncCalFromConvs();
   if(typeof renderCalendar==='function')renderCalendar();
-
 }
 
 function orgToggleStatus(cid){
@@ -2707,7 +2797,7 @@ function startTimerTick(){
   },30000);
 }
 function waUrlConv(c){
-  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:16),url=location.href.split('?')[0];
+  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:14),url=location.href.split('?')[0];
   const plazasLibres=MT-tit.length;
 
   // Build inscritos list
@@ -2799,7 +2889,7 @@ function syncCalFromConvs(){
         convId:c.id,
         status:c.status,
         inscritos:(c.players||[]).filter(p=>p.rol==='tit').length,
-        MT:c.MT||(c.tipo==='sala'?12:16)
+        MT:c.MT||(c.tipo==='sala'?12:14)
       });
     }else{
       // Update status and inscritos
@@ -3566,7 +3656,7 @@ function quitarVeto(idx){
 
 /* ===== PROMOCION SUPLENTE ===== */
 function promoverSuplente(c){
-  const MT=c.MT||(c.tipo==='sala'?12:16);
+  const MT=c.MT||(c.tipo==='sala'?12:14);
   const tit=(c.players||[]).filter(p=>p.rol==='tit');
   const sup=(c.players||[]).filter(p=>p.rol==='sup');
   if(tit.length<MT&&sup.length>0){
@@ -4839,7 +4929,10 @@ window.addEventListener('load',function(){
 
     <div class="fl">Cierre automático</div>
     <input class="fi" type="datetime-local" id="edit-cierre">
-    <p style="font-size:11px;color:var(--muted);margin-top:-8px">Deja vacío para no cambiar el cierre actual</p>
+    <p style="font-size:11px;color:var(--muted);margin-top:-8px">
+  El cierre automático está calculado para la hora de inicio del partido.
+  Solo modifica esto si quieres cerrar las inscripciones antes.
+</p>
 
     <button class="btn-green" onclick="guardarEditarConv()">
       <i class="ti ti-check"></i> Guardar cambios
