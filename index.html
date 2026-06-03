@@ -3677,12 +3677,19 @@ function abrirCampoConv(cid){
       const x=Math.round(t.x),y=Math.round(t.y);
       const nm=t.p.name.split(' ')[0].substring(0,8);
       const chosen=posLabels&&posLabels[t.p.pos]?posLabels[t.p.pos]:(t.p.pos||'');
-      return '<g>'+
+      // Check if player has paid
+    const hasPagado = (pagos[cid]||{})[t.p.name] === true;
+    return '<g>'+
         '<circle cx="'+x+'" cy="'+y+'" r="'+R+'" fill="'+t.bg+'" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>'+
         (t.isGKSlot?'<circle cx="'+x+'" cy="'+y+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-dasharray="3 2"/>':'')+
         '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#111" font-family="DM Sans,sans-serif">'+initials(t.p.name)+'</text>'+
         '<text x="'+x+'" y="'+(y+R+13)+'" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,.95)" font-family="DM Sans,sans-serif">'+nm+'</text>'+
         (chosen?'<text x="'+x+'" y="'+(y+R+23)+'" text-anchor="middle" font-size="7.5" fill="rgba(255,255,255,.5)" font-family="DM Sans,sans-serif">'+chosen+'</text>':'')+
+        // Payment check badge
+        (hasPagado?
+          '<circle cx="'+(x+R-2)+'" cy="'+(y-R+2)+'" r="7" fill="#22883d" stroke="#fff" stroke-width="1.5"/>'+
+          '<text x="'+(x+R-2)+'" y="'+(y-R+6)+'" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="DM Sans,sans-serif">✓</text>'
+        :'')+
       '</g>';
     }).join('')+
     '<text x="22" y="24" font-family="Bebas Neue,sans-serif" font-size="13" fill="'+COL_A+'" letter-spacing="1">EQ. A</text>'+
@@ -3706,7 +3713,8 @@ function abrirCampoConv(cid){
     '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">'+
       '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px"><div style="width:12px;height:12px;border-radius:50%;background:#f5c842"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Equipo A</span></div>'+
       '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px"><div style="width:12px;height:12px;border-radius:50%;background:#f5822a"></div><span style="font-size:11px;font-weight:700;color:var(--dark)">Equipo B</span></div>'+
-      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px;font-size:11px;color:var(--muted)">Círculo punteado = Portero · Texto = posición elegida por el jugador</div>'+
+      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px"><div style="width:12px;height:12px;border-radius:50%;background:#22883d;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:900">✓</div><span style="font-size:11px;font-weight:700;color:var(--dark)">Pago confirmado</span></div>'+
+      '<div style="display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px;font-size:11px;color:var(--muted)">Círculo punteado = Portero</div>'+
     '</div>'+
     (sinPos.length?'<div style="margin-top:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:7px">Sin equipo asignado</div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:6px">'+sinPos.map(p=>'<span style="background:var(--offwhite);border-radius:99px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--dark)">'+p.name+'</span>').join('')+'</div>':'');
