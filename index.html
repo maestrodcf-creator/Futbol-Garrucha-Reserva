@@ -1989,6 +1989,9 @@ function confirmarInscMulti(){
   }
   if(selConf_==='no'){closeModal('modal-insc');showToast('Anotado como No puedo ir');return;}
   const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:14);
+  // Duplicate check
+  const yaApuntado=(c.players||[]).some(p=>p.name.trim().toLowerCase()===_myName.trim().toLowerCase());
+  if(yaApuntado){showToast('Ya estás apuntado');closeModal('modal-insc');return;}
   let rol;
   if(tit.length<MT)rol='tit';
   else if(sup.length<2)rol='sup';
@@ -4534,75 +4537,55 @@ function abrirEditarPartido(idx){
 }
 
 function guardarEditarPartido(){
-  const idx = parseInt(document.getElementById('edit-partido-idx').value);
-  const h   = historial[idx];
+  const idx   = parseInt(document.getElementById('edit-partido-idx').value);
+  const h     = historial[idx];
   if(!h) return;
 
-  const newA = parseInt(document.getElementById('ep-scoreA').value) || 0;
-  const newB = parseInt(document.getElementById('ep-scoreB').value) || 0;
-  const notas = document.getElementById('ep-notas').value.trim();
+  const newA  = parseInt(document.getElementById('ep-scoreA').value)||0;
+  const newB  = parseInt(document.getElementById('ep-scoreB').value)||0;
+  const notas = (document.getElementById('ep-notas')||{}).value||'';
 
-  // Update scores
-  const oldA = h.scoreA, oldB = h.scoreB;
   h.scoreA = newA;
   h.scoreB = newB;
   if(notas) h.notas = notas;
 
-  // Update per-player stats
-  const tit = (h.players||[]).filter(p=>p.rol==='tit');
-  if(!h.statsJugadores) h.statsJugadores = {};
-
-  const statInputs = document.querySelectorAll('#ep-stats-list input[data-player]');
-  const collected = {};
-  statInputs.forEach(inp=>{
+  // Collect new stats per player
+  const newStats = {};
+  document.querySelectorAll('#ep-stats-list input[data-player]').forEach(inp=>{
     const pname = inp.getAttribute('data-player');
-    const field  = inp.getAttribute('data-field');
-    if(!collected[pname]) collected[pname] = {};
-    collected[pname][field] = parseInt(inp.value)||0;
+    const field = inp.getAttribute('data-field');
+    if(!newStats[pname]) newStats[pname]={goles:0,asistencias:0,amarillas:0,rojas:0};
+    newStats[pname][field] = parseInt(inp.value)||0;
   });
-  h.statsJugadores = collected;
+  h.statsJugadores = newStats;
 
-  // Recalculate jugadores stats: subtract old, add new
-  const eqA = h.teamA || [];
-  const eqB = h.teamB || [];
-  const oldGanador = oldA > oldB ? 'A' : oldB > oldA ? 'B' : 'empate';
-  const newGanador = newA > newB ? 'A' : newB > newA ? 'B' : 'empate';
-
-  tit.forEach(p=>{
-    const k = p.name.trim().toLowerCase();
-    if(!jugadores[k]) return;
-    const j = jugadores[k];
-    const inA = eqA.includes(p.name);
-    const inB = eqB.includes(p.name);
-
-    // Reverse old result
-    if(oldGanador==='empate'){j.empatados=Math.max(0,(j.empatados||0)-1);}
-    else if((oldGanador==='A'&&inA)||(oldGanador==='B'&&inB)){j.ganados=Math.max(0,(j.ganados||0)-1);}
-    else{j.perdidos=Math.max(0,(j.perdidos||0)-1);}
-
-    // Apply new result
-    if(newGanador==='empate'){j.empatados=(j.empatados||0)+1;}
-    else if((newGanador==='A'&&inA)||(newGanador==='B'&&inB)){j.ganados=(j.ganados||0)+1;}
-    else{j.perdidos=(j.perdidos||0)+1;}
-
-    // Recalculate racha (simplified: just recalculate from all historial)
-    // (We keep racha as-is for simplicity, not recalculating from scratch)
+  // Full recalculation of ALL jugadores from ALL historial
+  const nuevoJugs = {};
+  historial.filter(hh=>hh.estado==='jugado').forEach(hh=>{
+    const tit=(hh.players||[]).filter(p=>p.rol==='tit');
+    const stats=hh.statsJugadores||{};
+    const scA=hh.scoreA||0,scB=hh.scoreB||0;
+    const gan=scA>scB?'A':scB>scA?'B':'empate';
+    tit.forEach(p=>{
+      const k=p.name.trim().toLowerCase();
+      if(!nuevoJugs[k]) nuevoJugs[k]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
+      const j=nuevoJugs[k];
+      j.name=p.name; j.partidos++;
+      const enA=(hh.teamA||[]).includes(p.name);
+      if(gan==='empate'){j.empatados++;j.racha=0;}
+      else if((gan==='A'&&enA)||(gan==='B'&&!enA)){j.ganados++;j.racha=Math.max(0,(j.racha||0))+1;}
+      else{j.perdidos++;j.racha=Math.min(0,(j.racha||0))-1;}
+      const sp=stats[p.name]||{};
+      j.goles+=(sp.goles||0); j.asistencias+=(sp.asistencias||0);
+      j.amarillas+=(sp.amarillas||0); j.rojas+=(sp.rojas||0);
+      if(p.pos) j.posiciones[p.pos]=(j.posiciones[p.pos]||0)+1;
+    });
   });
-
-  // Recalculate goal/assist stats for all players in this match
-  tit.forEach(p=>{
-    const k = p.name.trim().toLowerCase();
-    if(!jugadores[k]) return;
-    const j = jugadores[k];
-    // Remove old stats for this match (if stored) and add new
-    // We track delta
-    const oldStats = {};
-    const newStats = collected[p.name] || {};
-    // We don't have old individual stats stored separately, so just recalculate
-    // by subtracting what was stored before and adding new
-    // Actually stored in h.statsJugadores before we overwrote it — 
-    // we already collected new values, so just update totals delta
+  // Merge: keep existing jugadores not in historial (preserve names/data)
+  Object.keys(jugadores).forEach(k=>{
+    if(!nuevoJugs[k]) nuevoJugs[k]=jugadores[k];
   });
+  Object.assign(jugadores, nuevoJugs);
 
   saveCloud();
   closeModal('modal-editar-partido');
@@ -4611,176 +4594,9 @@ function guardarEditarPartido(){
   renderOrgHistorial&&renderOrgHistorial();
   renderPartidosTemporada&&renderPartidosTemporada();
   if(typeof renderDashboard==='function')renderDashboard();
-  showToast('Partido actualizado');
+  showToast('Partido actualizado y estadísticas recalculadas');
 }
 
-
-/* ===== REGISTRO PARTIDO (separado del cierre) ===== */
-let _rpScores = {a:0, b:0};
-
-function adjRPScore(team, delta){
-  _rpScores[team] = Math.max(0, (_rpScores[team]||0) + delta);
-  const el = document.getElementById('rp-score-'+team);
-  if(el) el.textContent = _rpScores[team];
-}
-
-function abrirRegistroPartido(cid){
-  const c = convocatorias.find(x=>x.id===cid);
-  if(!c){ showToast('Convocatoria no encontrada'); return; }
-  // Auto-close if not already closed
-  if(c.status === 'abierta'){
-    c.status = 'cerrada';
-    saveCloud();
-  }
-
-  document.getElementById('rp-cid').value = cid;
-  _rpScores = {a:0, b:0};
-
-  // Reset score display
-  const sa = document.getElementById('rp-score-a');
-  const sb = document.getElementById('rp-score-b');
-  if(sa) sa.textContent = '0';
-  if(sb) sb.textContent = '0';
-
-  // Sub title
-  const sub = document.getElementById('rp-sub');
-  if(sub) sub.textContent = (c.tipo==='sala'?'Fútbol Sala':'Fútbol 7') + ' — ' + c.dia + (c.diames?' '+c.diames:'') + ' · ' + c.hora + (c.lugar?' · '+c.lugar:'');
-
-  // Notas
-  const notasEl = document.getElementById('rp-notas');
-  if(notasEl) notasEl.value = '';
-
-  // Build player stats list
-  const tit = getConvTit(c);
-  const eqA = (c.teamA&&c.teamA.length) ? c.teamA : tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
-  const eqB = (c.teamB&&c.teamB.length) ? c.teamB : tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
-
-  const listEl = document.getElementById('rp-stats-list');
-  if(!listEl) return;
-
-  if(!tit.length){
-    listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Sin jugadores titulares inscritos</div>';
-  } else {
-    listEl.innerHTML = tit.map((p,i)=>{
-      const inA = eqA.includes(p.name);
-      const inB = eqB.includes(p.name);
-      const teamL = inA?'A':inB?'B':'?';
-      const teamColor = inA?'#b8860b':inB?'#c04800':'var(--muted)';
-      const sid = 'rp_'+i;
-      return '<div style="padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'+
-        '<div style="width:30px;height:30px;border-radius:50%;background:'+(inA?'rgba(245,200,66,.15)':'rgba(245,130,42,.15)')+
-          ';border:1.5px solid '+(inA?'#f5c842':'#f5822a')+
-          ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--dark);flex-shrink:0">'+
-          initials(p.name)+
-        '</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:12px;font-weight:700;color:var(--dark);display:flex;align-items:center;gap:5px">'+
-            p.name+
-            '<span style="font-size:10px;font-weight:600;color:'+teamColor+';background:'+(inA?'rgba(245,200,66,.12)':'rgba(245,130,42,.12)')+
-              ';padding:1px 5px;border-radius:99px">Eq.'+teamL+'</span>'+
-          '</div>'+
-          '<div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">'+
-            [
-              {k:'goles',    l:'⚽ Goles',    id:sid+'_g'},
-              {k:'asistencias',l:'🅰️ Asist.',  id:sid+'_a'},
-              {k:'amarillas',l:'🟨 Amarillas',id:sid+'_am'},
-              {k:'rojas',    l:'🟥 Rojas',    id:sid+'_ro'},
-            ].map(f=>
-              '<label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--dark);font-weight:600">'+
-                f.l+
-                '<input type="number" id="'+f.id+'" value="0" min="0" '+
-                  'style="width:38px;border:1px solid var(--border);border-radius:6px;padding:3px 5px;font-size:12px;text-align:center;font-weight:700" '+
-                  'data-pname="'+p.name.replace(/"/g,'&quot;')+'">'+
-              '</label>'
-            ).join('')+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    }).join('');
-  }
-
-  openModal('modal-registro-partido');
-}
-
-function confirmarRegistroPartido(){
-  const cid = document.getElementById('rp-cid').value;
-  const c   = convocatorias.find(x=>x.id===cid);
-  if(!c){ showToast('Error: convocatoria no encontrada'); return; }
-
-  const tit  = getConvTit(c);
-  const eqA  = (c.teamA&&c.teamA.length) ? c.teamA : tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
-  const eqB  = (c.teamB&&c.teamB.length) ? c.teamB : tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
-  const scA  = _rpScores.a;
-  const scB  = _rpScores.b;
-  const ganador = scA > scB ? 'A' : scB > scA ? 'B' : 'empate';
-  const notas = (document.getElementById('rp-notas')||{}).value || '';
-
-  // Collect per-player stats
-  const statsJugadores = {};
-  document.querySelectorAll('#rp-stats-list input[data-pname]').forEach(inp=>{
-    const pname = inp.getAttribute('data-pname');
-    const id    = inp.id;
-    if(!statsJugadores[pname]) statsJugadores[pname]={goles:0,asistencias:0,amarillas:0,rojas:0};
-    const v = parseInt(inp.value)||0;
-    if(id.endsWith('_g'))  statsJugadores[pname].goles = v;
-    if(id.endsWith('_a'))  statsJugadores[pname].asistencias = v;
-    if(id.endsWith('_am')) statsJugadores[pname].amarillas = v;
-    if(id.endsWith('_ro')) statsJugadores[pname].rojas = v;
-  });
-
-  // Update jugadores stats
-  tit.forEach(p=>{
-    const k = p.name.trim().toLowerCase();
-    if(!jugadores[k]) jugadores[k]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
-    const j = jugadores[k];
-    j.name  = p.name;
-    j.partidos++;
-    const inA = eqA.includes(p.name);
-    const inB = eqB.includes(p.name);
-    if(ganador==='empate'){ j.empatados=(j.empatados||0)+1; j.racha=0; }
-    else if((ganador==='A'&&inA)||(ganador==='B'&&inB)){ j.ganados=(j.ganados||0)+1; j.racha=Math.max(0,(j.racha||0))+1; }
-    else{ j.perdidos=(j.perdidos||0)+1; j.racha=Math.min(0,(j.racha||0))-1; }
-    const sp = statsJugadores[p.name] || {};
-    j.goles        = (j.goles||0)       + (sp.goles||0);
-    j.asistencias  = (j.asistencias||0) + (sp.asistencias||0);
-    j.amarillas    = (j.amarillas||0)   + (sp.amarillas||0);
-    j.rojas        = (j.rojas||0)       + (sp.rojas||0);
-    if(p.pos) j.posiciones[p.pos] = (j.posiciones[p.pos]||0)+1;
-  });
-
-  // Push to historial
-  historial.push({
-    ...c,
-    estado:      'jugado',
-    scoreA:      scA,
-    scoreB:      scB,
-    asistentes:  tit.length,
-    pagos:       {...(pagos[cid]||{})},
-    statsJugadores,
-    notas,
-    fecha:       new Date().toLocaleDateString('es-ES'),
-  });
-
-  // Clean up
-  delete pagos[cid];
-  convocatorias = convocatorias.filter(x=>x.id!==cid);
-
-  saveCloud();
-  closeModal('modal-registro-partido');
-  renderOrgPanel();
-  renderInicioMulti();
-  renderJugadoresEnhanced();
-  syncCalFromConvs();
-  renderCalendar&&renderCalendar();
-  renderPartidosTemporada&&renderPartidosTemporada();
-  renderHistorialEnhanced();
-  renderOrgHistorial&&renderOrgHistorial();
-  renderOrgPanel&&renderOrgPanel();
-  showToast('Partido registrado: '+scA+' - '+scB);
-}
-
-
-/* ===== REGISTRO MANUAL DE PARTIDO ===== */
 function abrirRegistroManual(){
   // Pre-fill with any closed convocatoria if available
   const cerrada = convocatorias.find(c=>c.status==='cerrada');
@@ -4919,10 +4735,35 @@ function confirmarRegistroManual(){
     pagos:{},notas,
   });
 
+  // Full recalculation of all jugadores from all historial
+  const nuevoJugs2={};
+  historial.filter(hh=>hh.estado==='jugado').forEach(hh=>{
+    const tit2=(hh.players||[]).filter(p=>p.rol==='tit');
+    const stats2=hh.statsJugadores||{};
+    const scA2=hh.scoreA||0,scB2=hh.scoreB||0;
+    const gan2=scA2>scB2?'A':scB2>scA2?'B':'empate';
+    tit2.forEach(p=>{
+      const k2=p.name.trim().toLowerCase();
+      if(!nuevoJugs2[k2]) nuevoJugs2[k2]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
+      const j2=nuevoJugs2[k2];
+      j2.name=p.name; j2.partidos++;
+      const enA2=(hh.teamA||[]).includes(p.name);
+      if(gan2==='empate'){j2.empatados++;j2.racha=0;}
+      else if((gan2==='A'&&enA2)||(gan2==='B'&&!enA2)){j2.ganados++;j2.racha=Math.max(0,(j2.racha||0))+1;}
+      else{j2.perdidos++;j2.racha=Math.min(0,(j2.racha||0))-1;}
+      const sp2=stats2[p.name]||{};
+      j2.goles+=(sp2.goles||0); j2.asistencias+=(sp2.asistencias||0);
+      j2.amarillas+=(sp2.amarillas||0); j2.rojas+=(sp2.rojas||0);
+    });
+  });
+  Object.keys(jugadores).forEach(k=>{ if(!nuevoJugs2[k]) nuevoJugs2[k]=jugadores[k]; });
+  Object.assign(jugadores, nuevoJugs2);
+
   saveCloud();
   closeModal('modal-registro-manual');
   renderHistorialEnhanced();
   renderJugadoresEnhanced();
+  renderOrgHistorial&&renderOrgHistorial();
   if(typeof renderDashboard==='function')renderDashboard();
   syncCalFromConvs();
   renderCalendar&&renderCalendar();
