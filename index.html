@@ -1864,7 +1864,7 @@ function renderInicioMulti(){
   }else{
     welcomeBar.innerHTML='';
   }
-  const activas=convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada'||c.status==='cerrada automaticamente'||c.status==='cerrada-auto');
+  const activas=convocatorias.filter(c=>c.status!=='cancelado');
   if(!activas.length){
     el.innerHTML='<div class="empty-st" style="padding:48px 0"><i class="ti ti-whistle" style="font-size:32px"></i><strong>Sin convocatorias activas</strong><p>El organizador las creara desde el panel privado.</p></div>';
     return;
@@ -2124,7 +2124,7 @@ function renderOrgPanel(){
   const el = document.getElementById('org-panel');
   if(!el) return;
 
-  const activas = convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada'||c.status==='cerrada automaticamente'||c.status==='cerrada-auto');
+  const activas = convocatorias.filter(c=>c.status!=='cancelado');
 
   // ═══════════════════════════════════════════════════════════════
   // ZONA 1 — CREAR NUEVA CONVOCATORIA
@@ -3699,7 +3699,7 @@ function mostrarListaEquipos(){
   const campoEl=document.getElementById('equipos-campo');
   if(!listEl||!campoEl)return;
   campoEl.style.display='none';listEl.style.display='block';
-  const activas=convocatorias.filter(c=>c.status==='abierta'||c.status==='cerrada');
+  const activas=convocatorias.filter(c=>c.status!=='cancelado');
   if(!activas.length){
     listEl.innerHTML='<div class="empty-st" style="padding:48px 0"><i class="ti ti-layout-pitch" style="font-size:36px"></i><span class="emph" style="margin-top:4px">Sin equipos todavía</span><p>Cuando haya convocatorias activas con jugadores aparecerán aquí.</p></div>';
     return;
@@ -4618,8 +4618,10 @@ function adjRPScore(team, delta){
 function abrirRegistroPartido(cid){
   const c = convocatorias.find(x=>x.id===cid);
   if(!c){ showToast('Convocatoria no encontrada'); return; }
-  if(c.status !== 'cerrada'){
-    showToast('Cierra la convocatoria primero');return;
+  // Auto-close if not already closed
+  if(c.status === 'abierta'){
+    c.status = 'cerrada';
+    saveCloud();
   }
 
   document.getElementById('rp-cid').value = cid;
@@ -5101,69 +5103,6 @@ function abrirDetallePartido(idx){
 }
 
 
-/* ===== DEBUG ===== */
-function showDebugInfo(){
-  const convs = convocatorias.length;
-  const hist  = historial.length;
-  const jugs  = Object.keys(jugadores).length;
-  const plts  = plantillas.length;
-  console.log('=== PEÑA GARRUCHA DEBUG ===');
-  console.log('Convocatorias:', convs, convocatorias);
-  console.log('Historial:', hist, historial);
-  console.log('Jugadores:', jugs, jugadores);
-  console.log('Plantillas:', plts, plantillas);
-
-  // Show on screen in inicio
-  const el = document.getElementById('conv-list');
-  if(!el) return;
-  const dbg = document.createElement('div');
-  dbg.id = 'debug-panel';
-  dbg.style.cssText = 'background:rgba(0,0,255,.08);border:1px solid #0af;border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;font-family:monospace';
-  dbg.innerHTML =
-    '<div style="font-weight:700;margin-bottom:6px;color:#0af">🔍 Debug — Datos cargados desde Supabase</div>'+
-    '<div>Convocatorias: <strong>'+convs+'</strong></div>'+
-    convocatorias.map(c=>'<div style="margin-left:12px;color:#666">→ id:'+c.id+' status:<strong>'+c.status+'</strong> tipo:'+c.tipo+' dia:'+c.dia+'</div>').join('')+
-    '<div>Historial: <strong>'+hist+'</strong></div>'+
-    '<div>Jugadores: <strong>'+jugs+'</strong></div>'+
-    '<div>Plantillas: <strong>'+plts+'</strong></div>'+
-    '<div style="margin-top:8px;font-weight:700;color:#0af">Acciones rápidas:</div>'+
-    '<button onclick="forzarMostrarTodo()" style="margin-top:4px;border:1px solid #0af;background:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:10px;color:#0af;margin-right:6px">Mostrar todas las convocatorias</button>'+
-    '<button onclick="abrirRegistroManualForzado()" style="margin-top:4px;border:1px solid var(--grass);background:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:10px;color:var(--grass)">Registrar partido ahora</button>'+
-    '<div style="margin-top:6px;color:rgba(0,0,0,.5)">F12 → Console para ver datos completos</div>'+
-    '<button onclick="this.parentNode.remove()" style="margin-top:6px;border:1px solid #0af;background:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:10px;color:#0af">Cerrar</button>';
-  el.parentNode.insertBefore(dbg, el);
-}
-
-
-/* ===== DEBUG HELPERS ===== */
-function forzarMostrarTodo(){
-  // Force all convocatorias to show by setting status to abierta
-  const conv = convocatorias[0];
-  if(!conv){ showToast('No hay convocatorias'); return; }
-  console.log('Convocatoria actual:', JSON.stringify(conv, null, 2));
-
-  // Fix status if it's wrong
-  if(conv.status !== 'abierta' && conv.status !== 'cerrada'){
-    conv.status = 'cerrada'; // set to cerrada so register button appears
-    saveCloud();
-    showToast('Estado corregido a: cerrada');
-  }
-
-  renderInicioMulti();
-  renderOrgPanel&&renderOrgPanel();
-  showToast('Status: '+conv.status+' · Tipo: '+conv.tipo+' · Jugadores: '+((conv.players||[]).length));
-}
-
-function abrirRegistroManualForzado(){
-  // Skip the cerrada check and open registro directly
-  const conv = convocatorias[0];
-  if(!conv){ openModal('modal-registro-manual'); renderRMPlayerList(); return; }
-  // Force status to cerrada
-  conv.status = 'cerrada';
-  saveCloud();
-  abrirRegistroPartido(conv.id);
-}
-
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -5200,8 +5139,6 @@ window.addEventListener('load',function(){
     startTimerTick();
     startRealtime();
     hideSplash();
-    // Show debug info in console and on screen
-    showDebugInfo();
   });
 });
 
