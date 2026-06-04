@@ -2121,9 +2121,6 @@ function adjScConv(cid,t,d){
 }
 
 function renderOrgPanel(){
-  const el = document.getElementById('org-panel');
-  if(!el) return;
-
   const activas = convocatorias.filter(c=>c.status!=='cancelado');
 
   // ═══════════════════════════════════════════════════════════════
