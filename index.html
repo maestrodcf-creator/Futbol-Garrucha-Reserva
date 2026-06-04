@@ -4587,6 +4587,7 @@ function guardarEditarPartido(){
   });
   Object.assign(jugadores, nuevoJugs);
 
+  recalcJugadoresFromHistorial();
   saveCloud();
   closeModal('modal-editar-partido');
   renderHistorialEnhanced();
@@ -4735,29 +4736,7 @@ function confirmarRegistroManual(){
     pagos:{},notas,
   });
 
-  // Full recalculation of all jugadores from all historial
-  const nuevoJugs2={};
-  historial.filter(hh=>hh.estado==='jugado').forEach(hh=>{
-    const tit2=(hh.players||[]).filter(p=>p.rol==='tit');
-    const stats2=hh.statsJugadores||{};
-    const scA2=hh.scoreA||0,scB2=hh.scoreB||0;
-    const gan2=scA2>scB2?'A':scB2>scA2?'B':'empate';
-    tit2.forEach(p=>{
-      const k2=p.name.trim().toLowerCase();
-      if(!nuevoJugs2[k2]) nuevoJugs2[k2]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
-      const j2=nuevoJugs2[k2];
-      j2.name=p.name; j2.partidos++;
-      const enA2=(hh.teamA||[]).includes(p.name);
-      if(gan2==='empate'){j2.empatados++;j2.racha=0;}
-      else if((gan2==='A'&&enA2)||(gan2==='B'&&!enA2)){j2.ganados++;j2.racha=Math.max(0,(j2.racha||0))+1;}
-      else{j2.perdidos++;j2.racha=Math.min(0,(j2.racha||0))-1;}
-      const sp2=stats2[p.name]||{};
-      j2.goles+=(sp2.goles||0); j2.asistencias+=(sp2.asistencias||0);
-      j2.amarillas+=(sp2.amarillas||0); j2.rojas+=(sp2.rojas||0);
-    });
-  });
-  Object.keys(jugadores).forEach(k=>{ if(!nuevoJugs2[k]) nuevoJugs2[k]=jugadores[k]; });
-  Object.assign(jugadores, nuevoJugs2);
+  recalcJugadoresFromHistorial();
 
   saveCloud();
   closeModal('modal-registro-manual');
@@ -5092,6 +5071,174 @@ function verDetallePartidoOrg(idx){
 
 // Hook renderOrgHistorial after registro/edicion
 const _origGuardarEditarPartido = typeof guardarEditarPartido === 'function' ? guardarEditarPartido : null;
+
+
+/* ===== REGISTRO PARTIDO ===== */
+let _rpScores = {a:0, b:0};
+
+function adjRPScore(team, delta){
+  _rpScores[team] = Math.max(0, (_rpScores[team]||0) + delta);
+  const el = document.getElementById('rp-score-'+team);
+  if(el) el.textContent = _rpScores[team];
+}
+
+function abrirRegistroPartido(cid){
+  const c = convocatorias.find(x=>x.id===cid);
+  if(!c){ showToast('Convocatoria no encontrada'); return; }
+  // Auto-close if still open
+  if(c.status === 'abierta'){ c.status='cerrada'; saveCloud(); }
+
+  document.getElementById('rp-cid').value = cid;
+  _rpScores = {a:0, b:0};
+  const sa=document.getElementById('rp-score-a'); if(sa) sa.textContent='0';
+  const sb=document.getElementById('rp-score-b'); if(sb) sb.textContent='0';
+
+  const sub = document.getElementById('rp-sub');
+  if(sub) sub.textContent = (c.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7') +
+    ' — ' + c.dia + (c.diames?' '+c.diames:'') + ' · ' + c.hora + (c.lugar?' · '+c.lugar:'');
+
+  const notasEl = document.getElementById('rp-notas');
+  if(notasEl) notasEl.value = '';
+
+  // Build player stats list
+  const tit = getConvTit(c);
+  const eqA = (c.teamA&&c.teamA.length) ? c.teamA : tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+  const eqB = (c.teamB&&c.teamB.length) ? c.teamB : tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+  const listEl = document.getElementById('rp-stats-list');
+  if(!listEl) return;
+
+  if(!tit.length){
+    listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px">Sin jugadores titulares inscritos</div>';
+  } else {
+    listEl.innerHTML = tit.map((p,i)=>{
+      const inA=eqA.includes(p.name), inB=eqB.includes(p.name);
+      const teamL=inA?'A':inB?'B':'?';
+      const tcol=inA?'#b8860b':inB?'#c04800':'var(--muted)';
+      const sid='rp_'+i;
+      return '<div style="padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'+
+        '<div style="width:30px;height:30px;border-radius:50%;background:'+(inA?'rgba(245,200,66,.15)':'rgba(245,130,42,.15)')+
+          ';border:1.5px solid '+(inA?'#f5c842':'#f5822a')+
+          ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">'+
+          initials(p.name)+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:700;color:var(--dark)">'+p.name+
+            '<span style="font-size:10px;color:'+tcol+';background:'+(inA?'rgba(245,200,66,.12)':'rgba(245,130,42,.12)')+
+              ';padding:1px 5px;border-radius:99px;margin-left:5px">Eq.'+teamL+'</span></div>'+
+          '<div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">'+
+            [{k:'goles',l:'⚽'},{k:'asistencias',l:'🅰️'},{k:'amarillas',l:'🟨'},{k:'rojas',l:'🟥'}].map(f=>
+              '<label style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--dark)">'+f.l+
+                '<input type="number" id="'+sid+'_'+f.k[0]+'" value="0" min="0" '+
+                'style="width:36px;border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:11px;text-align:center" '+
+                'data-pname="'+p.name.replace(/"/g,'&quot;')+'"></label>'
+            ).join('')+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+  openModal('modal-registro-partido');
+}
+
+function confirmarRegistroPartido(){
+  const cid = document.getElementById('rp-cid').value;
+  const c   = convocatorias.find(x=>x.id===cid);
+  if(!c){ showToast('Error: convocatoria no encontrada'); return; }
+
+  const tit  = getConvTit(c);
+  const eqA  = (c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
+  const eqB  = (c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
+  const scA  = _rpScores.a, scB = _rpScores.b;
+  const notas = (document.getElementById('rp-notas')||{}).value||'';
+
+  // Collect per-player stats
+  const statsJugadores = {};
+  document.querySelectorAll('#rp-stats-list input[data-pname]').forEach(inp=>{
+    const pname=inp.getAttribute('data-pname');
+    const id=inp.id;
+    if(!statsJugadores[pname]) statsJugadores[pname]={goles:0,asistencias:0,amarillas:0,rojas:0};
+    const v=parseInt(inp.value)||0;
+    if(id.endsWith('_g'))  statsJugadores[pname].goles=v;
+    if(id.endsWith('_a'))  statsJugadores[pname].asistencias=v;
+    if(id.endsWith('_am')||id.endsWith('_a')){}  // handled above
+    if(id.includes('amarillas')) statsJugadores[pname].amarillas=v;
+    if(id.includes('rojas'))     statsJugadores[pname].rojas=v;
+  });
+
+  // Fix: read by field key suffix properly
+  tit.forEach((p,i)=>{
+    const sid='rp_'+i;
+    const g  = parseInt(document.getElementById(sid+'_g')?.value)||0;
+    const a  = parseInt(document.getElementById(sid+'_a')?.value)||0;
+    const am = parseInt(document.getElementById(sid+'_am')||document.getElementById(sid+'_amarillas')||{value:0})?.value||0;
+    const ro = parseInt(document.getElementById(sid+'_r')||document.getElementById(sid+'_rojas')||{value:0})?.value||0;
+    statsJugadores[p.name]={goles:g,asistencias:a,amarillas:am,rojas:ro};
+  });
+
+  // Push to historial
+  historial.push({
+    id: 'cv_reg_'+Date.now(),
+    tipo: c.tipo, dia: c.dia, diames: c.diames,
+    fecha: c.diames ? (c.diames+'/'+new Date().getMonth()+'/'+ new Date().getFullYear()) :
+           new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    hora: c.hora, lugar: c.lugar,
+    estado: 'jugado',
+    scoreA: scA, scoreB: scB,
+    asistentes: tit.length,
+    players: tit.map(p=>({...p, rol:'tit'})),
+    teamA: eqA, teamB: eqB,
+    statsJugadores,
+    pagos: {...(pagos[cid]||{})},
+    notas,
+  });
+
+  // Remove conv from active list
+  delete pagos[cid];
+  convocatorias = convocatorias.filter(x=>x.id!==cid);
+
+  // Full recalculation of ALL jugadores from ALL historial
+  recalcJugadoresFromHistorial();
+
+  saveCloud();
+  closeModal('modal-registro-partido');
+  renderOrgPanel();
+  renderInicioMulti();
+  renderJugadoresEnhanced();
+  syncCalFromConvs();
+  if(typeof renderCalendar==='function') renderCalendar();
+  renderPartidosTemporada&&renderPartidosTemporada();
+  renderHistorialEnhanced();
+  renderOrgHistorial&&renderOrgHistorial();
+  showToast('Partido registrado: '+scA+' - '+scB);
+}
+
+// Shared full recalculation function used by registro, editar and manual
+function recalcJugadoresFromHistorial(){
+  const calc={};
+  historial.filter(h=>h.estado==='jugado').forEach(h=>{
+    const tit=(h.players||[]).filter(p=>p.rol==='tit');
+    const stats=h.statsJugadores||{};
+    const sA=h.scoreA||0, sB=h.scoreB||0;
+    const gan=sA>sB?'A':sB>sA?'B':'empate';
+    tit.forEach(p=>{
+      const k=p.name.trim().toLowerCase();
+      if(!calc[k]) calc[k]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,
+                             goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
+      const j=calc[k];
+      j.name=p.name; j.partidos++;
+      const enA=(h.teamA||[]).includes(p.name);
+      if(gan==='empate'){j.empatados++;j.racha=0;}
+      else if((gan==='A'&&enA)||(gan==='B'&&!enA)){j.ganados++;j.racha=Math.max(0,(j.racha||0))+1;}
+      else{j.perdidos++;j.racha=Math.min(0,(j.racha||0))-1;}
+      const sp=stats[p.name]||{};
+      j.goles+=(sp.goles||0); j.asistencias+=(sp.asistencias||0);
+      j.amarillas+=(sp.amarillas||0); j.rojas+=(sp.rojas||0);
+      if(p.pos) j.posiciones[p.pos]=(j.posiciones[p.pos]||0)+1;
+    });
+  });
+  // Merge preserving existing player names
+  Object.keys(jugadores).forEach(k=>{ if(!calc[k]) calc[k]=jugadores[k]; });
+  Object.assign(jugadores, calc);
+}
 
 /* ===== CSS ===== */
 (function(){
