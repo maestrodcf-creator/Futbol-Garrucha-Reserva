@@ -780,6 +780,15 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           </div></div></div>
         </div>
         <div id="org-jug-section" style="margin-top:20px"></div>
+
+        <!-- ZONA PARTIDOS JUGADOS -->
+        <div style="margin-top:28px">
+          <div class="sec-label" style="margin-bottom:12px">
+            <i class="ti ti-history"></i> Partidos jugados — editar registros
+          </div>
+          <div id="org-historial-section"></div>
+        </div>
+
       </div><!-- /right col -->
 
     </div><!-- /grid -->
@@ -2298,6 +2307,7 @@ function renderOrgPanel(){
   renderOrgJug();
   renderListaNegra();
   renderPlantillas();
+  renderOrgHistorial();
   syncCalFromConvs();
   if(typeof renderCalendar==='function')renderCalendar();
 }
@@ -4598,7 +4608,9 @@ function guardarEditarPartido(){
   closeModal('modal-editar-partido');
   renderHistorialEnhanced();
   renderJugadoresEnhanced();
-  renderDashboard&&renderDashboard();
+  renderOrgHistorial&&renderOrgHistorial();
+  renderPartidosTemporada&&renderPartidosTemporada();
+  if(typeof renderDashboard==='function')renderDashboard();
   showToast('Partido actualizado');
 }
 
@@ -4762,6 +4774,8 @@ function confirmarRegistroPartido(){
   renderCalendar&&renderCalendar();
   renderPartidosTemporada&&renderPartidosTemporada();
   renderHistorialEnhanced();
+  renderOrgHistorial&&renderOrgHistorial();
+  renderOrgPanel&&renderOrgPanel();
   showToast('Partido registrado: '+scA+' - '+scB);
 }
 
@@ -5099,6 +5113,144 @@ function abrirDetallePartido(idx){
   openModal('modal-detalle-partido');
 }
 
+
+
+/* ===== HISTORIAL EN PANEL ORGANIZADOR ===== */
+function renderOrgHistorial(){
+  const el = document.getElementById('org-historial-section');
+  if(!el) return;
+
+  // Also include closed convocatorias that haven't been registered yet
+  const pendientes = convocatorias.filter(c=>c.status==='cerrada');
+  const jugados    = [...historial].reverse();
+
+  if(!pendientes.length && !jugados.length){
+    el.innerHTML =
+      '<div class="empty-st" style="padding:20px 0">'+
+        '<i class="ti ti-ball-football"></i>'+
+        '<p>No hay partidos registrados aún</p>'+
+      '</div>';
+    return;
+  }
+
+  let html_out = '';
+
+  // ── Convocatorias cerradas pendientes de registro ─────────────────────
+  if(pendientes.length){
+    html_out +=
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;'+
+      'color:var(--grass);margin-bottom:8px">⏳ Pendientes de registrar</div>';
+
+    html_out += pendientes.map(c=>{
+      const tit = getConvTit(c);
+      return '<div class="card" style="margin-bottom:10px;border:1.5px solid rgba(34,136,61,.3)">'+
+        '<div style="padding:12px 14px">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+            '<div>'+
+              '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+
+                (c.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7')+
+                ' · '+c.dia+(c.diames?' '+c.diames:'')+
+              '</div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+
+                c.hora+(c.lugar?' · '+c.lugar:'')+' · '+tit.length+' jugadores'+
+              '</div>'+
+            '</div>'+
+            '<button class="btn-green" style="padding:7px 14px;font-size:12px;white-space:nowrap" '+
+              'data-cid="'+c.id+'" onclick="abrirRegistroPartido(this.dataset.cid)">'+
+              '<i class="ti ti-clipboard-plus"></i> Registrar partido'+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // ── Partidos jugados ──────────────────────────────────────────────────
+  if(jugados.length){
+    html_out +=
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;'+
+      'color:var(--muted);margin-bottom:8px;margin-top:'+(pendientes.length?'16px':'0')+'">'+
+      '✓ Partidos registrados</div>';
+
+    html_out += jugados.map((h, i)=>{
+      const realIdx = historial.length - 1 - i;
+      const ganadorA = h.scoreA > h.scoreB;
+      const ganadorB = h.scoreB > h.scoreA;
+      const resColor = ganadorA?'var(--grass)':ganadorB?'#f5822a':'var(--muted)';
+      const tit = (h.players||[]).filter(p=>p.rol==='tit');
+      const stats = h.statsJugadores||{};
+
+      // Top scorers
+      const scorers = tit
+        .map(p=>({name:p.name, g:(stats[p.name]||{}).goles||0}))
+        .filter(p=>p.g>0)
+        .sort((a,b)=>b.g-a.g)
+        .slice(0,3);
+
+      return '<div class="card" style="margin-bottom:10px">'+
+        '<div style="padding:12px 14px">'+
+
+          // Header row
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+            // Date badge
+            '<div style="width:40px;height:40px;border-radius:var(--r-sm);background:var(--pitch);'+
+              'display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">'+
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;color:var(--lime);line-height:1">'+
+                (h.fecha?h.fecha.split('/')[0]:'?')+
+              '</div>'+
+              '<div style="font-size:8px;color:rgba(184,246,58,.5);text-transform:uppercase">'+
+                (h.fecha?((['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'])
+                  [parseInt(h.fecha.split('/')[1]||0)-1]||''):'')+'</div>'+
+            '</div>'+
+            // Info
+            '<div style="flex:1;min-width:0">'+
+              '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+
+                (h.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7')+
+                (h.lugar?' · '+h.lugar:'')+
+              '</div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+
+                tit.length+' jugadores'+
+                (scorers.length?' · ⚽ '+scorers.map(s=>s.name.split(' ')[0]+'('+s.g+')').join(', '):'')+
+              '</div>'+
+            '</div>'+
+            // Score
+            '<div style="text-align:center;flex-shrink:0">'+
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;line-height:1;color:'+resColor+'">'+
+                (h.scoreA!==undefined?h.scoreA+':'+h.scoreB:'—')+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+
+          // Action buttons
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+            '<button class="org-action-btn" style="color:var(--blue)" '+
+              'data-idx="'+realIdx+'" onclick="abrirEditarPartido(parseInt(this.dataset.idx))">'+
+              '<i class="ti ti-pencil"></i> Editar registro'+
+            '</button>'+
+            '<button class="org-action-btn" '+
+              'data-idx="'+realIdx+'" onclick="verDetallePartidoOrg(parseInt(this.dataset.idx))">'+
+              '<i class="ti ti-eye"></i> Ver detalle'+
+            '</button>'+
+            '<button class="org-action-btn red" '+
+              'data-idx="'+realIdx+'" onclick="borrarEntradaHistorial(parseInt(this.dataset.idx))">'+
+              '<i class="ti ti-trash"></i> Borrar'+
+            '</button>'+
+          '</div>'+
+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  el.innerHTML = html_out;
+}
+
+function verDetallePartidoOrg(idx){
+  abrirDetallePartido(idx);
+}
+
+// Hook renderOrgHistorial after registro/edicion
+const _origGuardarEditarPartido = typeof guardarEditarPartido === 'function' ? guardarEditarPartido : null;
 
 /* ===== CSS ===== */
 (function(){
