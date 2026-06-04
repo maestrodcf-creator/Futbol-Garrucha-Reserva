@@ -2671,8 +2671,7 @@ function renderHistorialEnhanced(){
     const bar=document.createElement('div');bar.id='hist-reset-bar';
     bar.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;flex-wrap:wrap';
     bar.innerHTML=
-      '<button onclick="abrirRegistroManual()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:7px 13px;font-size:12px;font-weight:600;color:var(--grass);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-plus"></i> Registrar partido</button>'+
-      '<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo</button>';
+      '<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo el historial</button>';
     const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
   }
 
@@ -2751,7 +2750,7 @@ function renderHistorialEnhanced(){
 
         // Edit + Delete btns
         '<div style="display:flex;gap:2px;flex-shrink:0;margin-top:2px">'+
-          (jugado?'<button data-idx="'+idx+'" onclick="abrirEditarPartido(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:#0C447C;padding:4px 6px;font-size:14px;border-radius:6px" title="Editar partido"><i class="ti ti-pencil"></i></button>':'')+
+          (jugado?'<button data-idx="'+idx+'" onclick="abrirEditarPartido(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:#0C447C;padding:4px 6px;font-size:14px;border-radius:6px" title="Editar en Organizador"><i class="ti ti-pencil"></i></button>':'')+
           '<button data-idx="'+idx+'" onclick="borrarEntradaHistorial(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:14px;border-radius:6px" title="Eliminar"><i class="ti ti-trash"></i></button>'+
         '</div>'+
 
@@ -2907,10 +2906,14 @@ function syncCalFromConvs(){
     if(!calEvents[k].length) delete calEvents[k];
   });
   // Sync historial entries to calendar
+  const currentYear=new Date().getFullYear();
   historial.filter(h=>h.estado==='jugado'&&h.fecha).forEach(h=>{
     const parts=h.fecha.split('/');
     if(parts.length!==3)return;
-    const key=parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+    // Use current year if stored year seems wrong (more than 1 year in past)
+    let yr=parts[2];
+    if(parseInt(yr)<currentYear-1) yr=String(currentYear);
+    const key=yr+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
     if(!calEvents[key])calEvents[key]=[];
     const exists=calEvents[key].find(ev=>ev.histId===h.id);
     if(!exists){
@@ -5217,8 +5220,7 @@ function confirmarRegistroPartido(){
   historial.push({
     id: 'cv_reg_'+Date.now(),
     tipo: c.tipo, dia: c.dia, diames: c.diames,
-    fecha: c.diames ? (c.diames+'/'+new Date().getMonth()+'/'+ new Date().getFullYear()) :
-           new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    fecha: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}),
     hora: c.hora, lugar: c.lugar,
     estado: 'jugado',
     scoreA: scA, scoreB: scB,
