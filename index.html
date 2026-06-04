@@ -1429,18 +1429,42 @@ function renderCalendar(){
 function calNav(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++}else if(calMonth<0){calMonth=11;calYear--}renderCalendar()}
 
 function openCalEvent(dateStr){
-  const evs=calEvents[dateStr]||[];
+  var evs=calEvents[dateStr]||[];
   if(!evs.length)return;
-  const [y,m,d]=dateStr.split('-');
-  const dayName=DIAS_ES[new Date(y,m-1,d).getDay()];
+  var parts=dateStr.split('-');
+  var y=parts[0],m=parts[1],d=parts[2];
+  var dayName=DIAS_ES[new Date(y,parseInt(m)-1,d).getDay()];
   document.getElementById('cal-ev-title').textContent=dayName+' '+d+'/'+m+'/'+y;
-  document.getElementById('cal-ev-sub').textContent=evs.length+' convocatoria'+(evs.length>1?'s':'');
-  document.getElementById('cal-ev-detail').innerHTML=evs.map(ev=>`
-    <div style="background:var(--offwhite);border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px">
-      <div style="font-weight:700;font-size:14px">${ev.label}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-clock" style="font-size:12px"></i> ${ev.hora}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="ti ti-map-pin" style="font-size:12px"></i> ${ev.lugar||'—'}</div>
-    </div>`).join('');
+  var nP=evs.filter(function(ev){return ev.estado==='jugado';}).length;
+  var nC=evs.filter(function(ev){return ev.convId;}).length;
+  document.getElementById('cal-ev-sub').textContent=
+    (nP?nP+' partido'+(nP>1?'s jugados':' jugado'):'')+(nP&&nC?' · ':'')+(nC?nC+' convocatoria'+(nC>1?'s':''):'')||
+    (evs.length+' evento'+(evs.length>1?'s':''));
+  var rows=evs.map(function(ev,i){
+    var isJ=ev.estado==='jugado';
+    var hIdx=isJ?historial.findIndex(function(h){return h.id===ev.histId;}):-1;
+    var sc=ev.scoreA!==undefined?(ev.scoreA+':'+ev.scoreB):'';
+    var rc=sc?(ev.scoreA>ev.scoreB?'var(--grass)':ev.scoreB>ev.scoreA?'#f5822a':'var(--muted)'):'';
+    return '<div class="cal-ev-detail-row" style="background:var(--offwhite);border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px;cursor:'+(isJ&&hIdx>=0?'pointer':'default')+'" data-hidx="'+hIdx+'">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'+
+        '<div style="font-weight:700;font-size:14px">'+ev.label+'</div>'+
+        (sc?'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:'+rc+'">'+sc+'</div>':
+           '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(ev.status==='cerrada'?'rgba(192,57,43,.1)':'rgba(34,136,61,.1)')+';color:'+(ev.status==='cerrada'?'var(--red)':'var(--grass)')+'">'+
+             (ev.status==='cerrada'?'Cerrada':'Abierta')+'</span>')+
+      '</div>'+
+      (ev.hora?'<div style="font-size:12px;color:var(--muted)"><i class="ti ti-clock" style="font-size:11px"></i> '+ev.hora+'</div>':'')+
+      (ev.lugar?'<div style="font-size:12px;color:var(--muted);margin-top:2px"><i class="ti ti-map-pin" style="font-size:11px"></i> '+ev.lugar+'</div>':'')+
+      (isJ&&ev.asistentes?'<div style="font-size:11px;color:var(--muted);margin-top:2px"><i class="ti ti-users" style="font-size:11px"></i> '+ev.asistentes+' jugadores</div>':'')+
+      (isJ&&hIdx>=0?'<div style="font-size:11px;color:var(--grass);margin-top:6px;font-weight:600"><i class="ti ti-arrow-right" style="font-size:11px"></i> Ver detalles del partido</div>':'')+
+    '</div>';
+  });
+  document.getElementById('cal-ev-detail').innerHTML=rows.join('');
+  setTimeout(function(){
+    document.querySelectorAll('.cal-ev-detail-row').forEach(function(el){
+      var idx=parseInt(el.getAttribute('data-hidx'));
+      if(idx>=0){el.addEventListener('click',function(){abrirDetallePartido(idx);closeModal('modal-cal-ev');});}
+    });
+  },50);
   document.getElementById('modal-cal-ev').classList.add('open');
 }
 
@@ -2866,7 +2890,12 @@ function patchConfirmarInsc(){
 
 
 function syncCalFromConvs(){
-  // Also sync historial entries to calendar
+  // Reset historial entries before rebuilding (avoid stale data)
+  Object.keys(calEvents).forEach(k=>{
+    calEvents[k]=calEvents[k].filter(ev=>!ev.histId);
+    if(!calEvents[k].length) delete calEvents[k];
+  });
+  // Sync historial entries to calendar
   historial.filter(h=>h.estado==='jugado'&&h.fecha).forEach(h=>{
     const parts=h.fecha.split('/');
     if(parts.length!==3)return;
