@@ -344,6 +344,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   .mobile-screens{display:none}
 }
 
+.cal-event-past{background:rgba(245,200,66,.25)!important;color:#b8860b!important;font-weight:700}
+.has-event-past{background:rgba(245,200,66,.08)!important;border-color:rgba(245,200,66,.35)!important}
+.has-event-past .cal-day-num{color:#b8860b!important}
+.cal-day.has-event-past{cursor:pointer}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--bdr2);background:none;transition:all .2s}
 .pin-dot.filled{background:var(--grass);border-color:var(--grass)}
 .pin-dot.error{background:var(--rs);border-color:var(--rs);animation:shake .3s}
@@ -1392,12 +1396,19 @@ function renderCalendar(){
   let next=1;
   while(cells.length<42){cells.push({day:next++,inMonth:false,date:null})}
 
+  const todayStr=new Date().toISOString().slice(0,10);
   grid.innerHTML=cells.map(c=>{
     if(!c.inMonth)return`<div class="cal-day" style="opacity:.25"><div>${c.day}</div></div>`;
     const hasEv=c.events&&c.events.length>0;
+    const isPast=c.date&&c.date<todayStr&&!c.isToday;
+    const hasJugado=hasEv&&c.events.some(e=>e.estado==='jugado');
     const todayCls=c.isToday?'today':'';
-    const evCls=hasEv?'has-event':'';
-    const evHtml=hasEv?c.events.slice(0,1).map(e=>`<div class="cal-event-pip">${e.hora} ${e.label.split(' ')[1]||e.label}</div>`).join(''):'';
+    const evCls=hasJugado?'has-event-past':hasEv?'has-event':'';
+    const evHtml=hasEv?c.events.slice(0,1).map(e=>{
+      const jugado=e.estado==='jugado';
+      const sc=e.scoreA!==undefined?(e.scoreA+':'+e.scoreB):'';
+      return '<div class="cal-event-pip'+(jugado?' cal-event-past':'')+'">'+(sc?sc+' ':e.hora+' ')+e.label.split('—')[0].trim()+'</div>';
+    }).join(''):'';
     return`<div class="cal-day in-month ${todayCls} ${evCls}" onclick="${hasEv?`openCalEvent('${c.date}')`:''}" title="${hasEv?c.events[0].label:''}">
       <div class="cal-day-num">${c.day}</div>${evHtml}
     </div>`;
