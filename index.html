@@ -459,7 +459,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   </div>
   <div class="sidebar-nav">
     <button class="snb active" data-screen="inicio" onclick="showScreen('inicio',this)"><i class="ti ti-home"></i> Inicio</button>
-    <button class="snb" data-screen="conv" id="snb-conv" onclick="showScreen('conv',this)" disabled><i class="ti ti-ball-football"></i> Convocatoria</button>
+    
     <button class="snb" data-screen="campo" id="snb-campo" onclick="showScreen('campo',this)"><i class="ti ti-layout-pitch"></i> Equipos</button>
     
     
@@ -820,7 +820,6 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 <!-- Mobile bottom nav -->
 <nav class="bnav" role="navigation">
   <button class="nb active" data-screen="inicio" onclick="showScreen('inicio',this)"><i class="ti ti-home"></i><span>Inicio</span></button>
-  <button class="nb" data-screen="conv" id="nb-conv" onclick="showScreen('conv',this)" disabled><i class="ti ti-ball-football"></i><span>Conv.</span></button>
   <button class="nb" data-screen="campo" id="nb-campo" onclick="showScreen('campo',this)"><i class="ti ti-layout-pitch"></i><span>Equipos</span></button>
   
   <button class="nb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i><span>Cal.</span></button>
@@ -1072,18 +1071,18 @@ function addConvToCalendar(conv){
 }
 
 function enableConvScreens(){
-  ['snb-conv','snb-campo',].forEach(id=>{
+  ['snb-campo',].forEach(id=>{
     const el=document.getElementById(id);if(el)el.disabled=false;
   });
-  ['nb-conv',].forEach(id=>{
+  [].forEach(id=>{
     const el=document.getElementById(id);if(el)el.disabled=false;
   });
 }
 function disableConvScreens(){
-  ['snb-conv','snb-campo',].forEach(id=>{
+  ['snb-campo',].forEach(id=>{
     const el=document.getElementById(id);if(el)el.disabled=true;
   });
-  ['nb-conv',].forEach(id=>{
+  [].forEach(id=>{
     const el=document.getElementById(id);if(el)el.disabled=true;
   });
 }
