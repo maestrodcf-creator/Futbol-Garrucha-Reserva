@@ -637,7 +637,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
     <!-- ─── JUGADORES ─── -->
     <div id="sc-jugadores" class="screen">
-      <div class="sec-pad" style="padding-top:16px">
+      <div style="padding:10px 16px 0;display:flex;justify-content:flex-end">
+        <button onclick="abrirAvatarEditor()" style="border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);cursor:pointer;padding:7px 14px;font-size:12px;font-weight:700;color:var(--grass);display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif"><i class="ti ti-user-edit" style="font-size:14px"></i> Editar mi avatar</button>
+      </div>
+      <div class="sec-pad" style="padding-top:10px">
         <div id="jugadores-list">
           <div class="empty-st"><i class="ti ti-users"></i><span class="emph">Sin jugadores registrados</span><p>Los jugadores aparecerán aquí cuando se inscriban en una convocatoria.</p></div>
         </div>
@@ -820,7 +823,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 </div>
 
 
-    <div id="sc-dashboard" class="screen">
+    <div id="sc-avatar" class="screen">
+    <div class="sec-pad" style="padding-top:16px">
+      <div id="avatar-editor-content"></div>
+    </div>
+  </div>
+
+  <div id="sc-dashboard" class="screen">
       <div class="sec-pad" style="padding-top:16px">
         <div id="dashboard-content"></div>
       </div>
@@ -1659,8 +1668,8 @@ function renderHistorial(){
 /* ═══════════════════════
    UI HELPERS
 ═══════════════════════ */
-const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Equipos',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada'};
-const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Equipos por convocatoria',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control'};
+const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Equipos',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada','avatar':'Mi Avatar'};
+const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Equipos por convocatoria',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control','avatar':'Personaliza tu perfil'};
 
 function showScreen(id,btn){
   if(btn&&btn.disabled)return;
@@ -1837,6 +1846,7 @@ function patchShowScreen(){
     if(id==='lista'){/* lista rendered by verListaConv */}
     if(id==='perfil'){/* perfil rendered by abrirPerfil */}
     if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
+    if(id==='avatar'){renderAvatarEditor();}
     if(id==='hist')renderHistorialEnhanced();
     if(id==='dashboard')renderDashboard();
     if(id==='inicio')renderInicioMulti();
@@ -2640,32 +2650,35 @@ function renderJugadoresEnhanced(){
     el.innerHTML='<div class="empty-st"><i class="ti ti-users"></i><strong>Sin jugadores</strong><p>Aparecen al cerrar el primer partido</p></div>';
     return;
   }
-  el.innerHTML=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0)).map(j=>{
-    const pp=Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1])[0];
+  el.innerHTML=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0)).map(function(j){
+    const pp=Object.entries(j.posiciones||{}).sort(function(a,b){return b[1]-a[1];})[0];
     const racha=j.racha||0;
-    const rh=racha>=2?'<span style="background:#FFF0DC;color:#C05E00;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+racha+' racha</span>':racha<=-2?'<span style="background:#E6F1FB;color:#0C447C;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+Math.abs(racha)+' der.</span>':'';
-    return '<div class="card" style="margin-bottom:10px;cursor:pointer" data-jname="'+j.name.replace(/"/g,'&quot;')+'" onclick="abrirPerfil(this.dataset.jname)">'+
+    const rh=racha>=2?
+      '<span style="background:#FFF0DC;color:#C05E00;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+racha+' racha</span>':
+      racha<=-2?
+      '<span style="background:#E6F1FB;color:#0C447C;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+Math.abs(racha)+' der.</span>':'';
+    var avHtml=buildAvatarToken(j.name);
+    var safeName=j.name.replace(/"/g,'&quot;');
+    return '<div class="card" style="margin-bottom:10px;cursor:pointer" data-jname="'+safeName+'" onclick="abrirPerfil(this.dataset.jname)">'+
       '<div style="padding:12px 14px;display:flex;align-items:center;gap:11px">'+
-      '+buildAvatarToken(j.name)+'
-        '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+j.name+rh+insigniasPills(j.name)+'</div>'+
-          '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+(pp&&posLabels?posLabels[pp[0]]||pp[0]:'Sin posicion')+' &middot; '+(j.partidos||0)+' partidos &middot; '+(j.ganados||0)+'V '+(j.empatados||0)+'E '+(j.perdidos||0)+'D</div></div>'+
+        avHtml+
+        '<div style="flex:1">'+
+          '<div style="font-weight:700;font-size:14px">'+j.name+rh+insigniasPills(j.name)+'</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+
+            (pp&&posLabels?posLabels[pp[0]]||pp[0]:'Sin posicion')+
+            ' &middot; '+(j.partidos||0)+' partidos &middot; '+(j.ganados||0)+'V '+(j.empatados||0)+'E '+(j.perdidos||0)+'D'+
+          '</div>'+
+        '</div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)">'+
-        ['goles','asistencias','amarillas','rojas'].map((f,fi)=>
-          '<div style="padding:9px 8px;text-align:center;'+(fi<3?'border-right:1px solid var(--border)':'')+'">'+
+        ['goles','asistencias','amarillas','rojas'].map(function(f,fi){
+          return '<div style="padding:9px 8px;text-align:center;'+(fi<3?'border-right:1px solid var(--border)':'')+'">' +
             '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:'+(['var(--grass)','#0C447C','#B8860B','var(--red)'][fi])+'">'+( j[f]||0)+'</div>'+
             '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">'+(['Goles','Asist.','Amarillas','Rojas'][fi])+'</div>'+
-          '</div>'
-        ).join('')+
+          '</div>';
+        }).join('')+
       '</div>'+
-    '</div>'+
-    '<div style="padding:6px 14px 10px;border-top:1px solid var(--border)">'+
-        '<button class="av-btn" data-jn="'+j.name.replace(/"/g,'&quot;')+'" '+
-          'onclick="event.stopPropagation();abrirAvatarPicker(this.dataset.jn)" '+
-          'style="border:1px dashed var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;'+
-          'padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px">'+
-          '<i class=\"ti ti-user-circle\" style=\"font-size:13px\"></i> Cambiar avatar</button>'+
-      '</div>';
+    '</div>';
   }).join('');
 }
 
@@ -5716,6 +5729,241 @@ function notifPartidoRegistrado(h){
     h.scoreA+':'+h.scoreB+' — '+res+' · '+h.fecha,
     {tag:'partido-'+h.id}
   );
+}
+
+/* ===== AVATAR EDITOR (dedicated screen) ===== */
+function abrirAvatarEditor(){
+  renderAvatarEditor();
+  showScreen('avatar', null);
+}
+
+function renderAvatarEditor(){
+  const el = document.getElementById('avatar-editor-content');
+  if(!el) return;
+
+  // All known player names
+  const playerNames = Object.values(jugadores)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(j=>j.name);
+
+  // Also add _myName if not in jugadores yet
+  if(_myName && !playerNames.includes(_myName)) playerNames.unshift(_myName);
+
+  el.innerHTML =
+    // ── Select player ──────────────────────────────────────────────────
+    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:16px;margin-bottom:16px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(184,246,58,.6);margin-bottom:10px">'+
+        '<i class="ti ti-user-circle"></i> ¿Quién eres?'+
+      '</div>'+
+      '<select id="av-select-player" onchange="onAvatarPlayerChange()" '+
+        'style="width:100%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);'+
+        'color:#fff;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer">'+
+        '<option value="">— Selecciona tu nombre —</option>'+
+        playerNames.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>').join('')+
+      '</select>'+
+    '</div>'+
+
+    // ── Avatar preview ─────────────────────────────────────────────────
+    '<div id="av-editor-main" style="display:none">'+
+
+      // Preview
+      '<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">'+
+        '<div id="av-preview-wrap" style="position:relative;margin-bottom:10px">'+
+          '<div id="av-big-preview" style="width:88px;height:88px;border-radius:50%;'+
+            'background:var(--grass);display:flex;align-items:center;justify-content:center;'+
+            'font-size:36px;color:#fff;font-weight:700;border:4px solid rgba(255,255,255,.2);'+
+            'transition:all .2s">AB</div>'+
+        '</div>'+
+        '<div id="av-preview-name" style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;'+
+          'color:var(--lime);letter-spacing:.04em;margin-bottom:4px"></div>'+
+        '<div id="av-preview-sub" style="font-size:12px;color:var(--muted)">Pulsa opciones para personalizar</div>'+
+      '</div>'+
+
+      // ── OPTIONS ────────────────────────────────────────────────────────
+      // 1. Emoji picker
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);'+
+        'padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'+
+          'color:var(--muted);margin-bottom:10px"><i class="ti ti-mood-smile"></i> Elige un emoji</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">'+
+          ['⚽','🥅','🧤','👟','🦵','🏃','💪','🌟','🔥','⚡','🦅','🏆','🎯','👑','⚔️','🛡️','🎪','🧊'].map(em=>
+            '<button class="av-em-btn" data-em="'+em+'" onclick="selectAvatarEmoji(\''+em+'\')" '+
+              'style="height:44px;border:2px solid var(--border);border-radius:10px;'+
+              'background:var(--offwhite);font-size:22px;cursor:pointer;transition:all .15s">'+em+'</button>'
+          ).join('')+
+        '</div>'+
+      '</div>'+
+
+      // 2. Color picker
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);'+
+        'padding:14px;margin-bottom:12px">'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;'+
+          'color:var(--muted);margin-bottom:10px"><i class="ti ti-palette"></i> Elige un color de fondo</div>'+
+        '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+          ['#22883d','#0C447C','#8B0000','#4B0082','#B8860B','#1a6666','#883200','#333333',
+           '#c0392b','#e67e22','#16a085','#2980b9','#8e44ad','#2c3e50','#d35400','#27ae60'].map(col=>
+            '<button class="av-col-btn" data-col="'+col+'" onclick="selectAvatarColor(\''+col+'\')" '+
+              'style="width:36px;height:36px;border-radius:50%;background:'+col+';border:3px solid transparent;'+
+              'cursor:pointer;transition:all .15s;flex-shrink:0">'+
+            '</button>'
+          ).join('')+
+        '</div>'+
+      '</div>'+
+
+      // 3. Iniciales info
+      '<div style="background:var(--offwhite);border:1px dashed var(--border2);border-radius:var(--r-md);'+
+        'padding:12px 14px;margin-bottom:20px;display:flex;align-items:center;gap:10px">'+
+        '<div id="av-initials-badge" style="width:40px;height:40px;border-radius:50%;'+
+          'display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff">AB</div>'+
+        '<div>'+
+          '<div style="font-size:12px;font-weight:600;color:var(--dark)">Iniciales automáticas</div>'+
+          '<div style="font-size:11px;color:var(--muted)">Si no eliges nada, se usan tus iniciales con color aleatorio</div>'+
+        '</div>'+
+        '<button onclick="resetAvatar()" '+
+          'style="margin-left:auto;border:1px solid var(--border2);background:none;border-radius:8px;'+
+          'padding:5px 10px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap">'+
+          'Usar iniciales</button>'+
+      '</div>'+
+
+      // Save button
+      '<button class="btn-green" style="width:100%" onclick="guardarAvatarEditor()">'+
+        '<i class="ti ti-check"></i> Guardar mi avatar'+
+      '</button>'+
+      '<button class="btn-outline" style="width:100%;margin-top:8px" '+
+        'onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))">'+
+        'Volver a jugadores'+
+      '</button>'+
+
+    '</div>'; // end av-editor-main
+
+  // Pre-select current player if _myName is set
+  if(_myName){
+    const sel=document.getElementById('av-select-player');
+    if(sel){
+      for(let i=0;i<sel.options.length;i++){
+        if(sel.options[i].value===_myName){sel.selectedIndex=i;break;}
+      }
+      onAvatarPlayerChange();
+    }
+  }
+}
+
+function onAvatarPlayerChange(){
+  const sel=document.getElementById('av-select-player');
+  const name=sel?sel.value:'';
+  const main=document.getElementById('av-editor-main');
+  if(!name){if(main)main.style.display='none';return;}
+  if(main)main.style.display='block';
+
+  const k=name.trim().toLowerCase();
+  const j=jugadores[k];
+  const col=j&&j.avatarColor?j.avatarColor:jColor(name);
+  const em=j&&j.avatarEmoji?j.avatarEmoji:'';
+
+  // Update big preview
+  const prev=document.getElementById('av-big-preview');
+  const nameEl=document.getElementById('av-preview-name');
+  const initBadge=document.getElementById('av-initials-badge');
+
+  if(nameEl)nameEl.textContent=name;
+  if(initBadge){initBadge.style.background=jColor(name);initBadge.textContent=ini2(name);}
+
+  if(prev){
+    if(em){
+      prev.textContent=em;
+      prev.style.background='rgba(0,0,0,.1)';
+      prev.style.fontSize='40px';
+    } else {
+      prev.textContent=ini2(name);
+      prev.style.background=col;
+      prev.style.fontSize='32px';
+    }
+  }
+
+  // Update pending
+  _pendingAvatar = j&&j.avatarEmoji?{type:'emoji',val:j.avatarEmoji}:
+                   j&&j.avatarColor?{type:'color',val:j.avatarColor}:null;
+  _avatarPickerTarget=name;
+
+  // Highlight current selections
+  document.querySelectorAll('.av-em-btn').forEach(b=>{
+    const isSelected=b.dataset.em===em;
+    b.style.borderColor=isSelected?'var(--grass)':'var(--border)';
+    b.style.background=isSelected?'rgba(34,136,61,.15)':'var(--offwhite)';
+    b.style.transform=isSelected?'scale(1.15)':'scale(1)';
+  });
+  document.querySelectorAll('.av-col-btn').forEach(b=>{
+    const isSelected=b.dataset.col===col&&!em;
+    b.style.border=isSelected?'3px solid #fff':'3px solid transparent';
+    b.style.boxShadow=isSelected?'0 0 0 2px var(--grass)':'none';
+  });
+}
+
+function selectAvatarEmoji(em){
+  _pendingAvatar={type:'emoji',val:em};
+  const prev=document.getElementById('av-big-preview');
+  if(prev){prev.textContent=em;prev.style.background='rgba(0,0,0,.1)';prev.style.fontSize='40px';}
+  const sub=document.getElementById('av-preview-sub');
+  if(sub)sub.textContent='Emoji seleccionado — pulsa Guardar';
+  document.querySelectorAll('.av-em-btn').forEach(b=>{
+    const isSel=b.dataset.em===em;
+    b.style.borderColor=isSel?'var(--grass)':'var(--border)';
+    b.style.background=isSel?'rgba(34,136,61,.15)':'var(--offwhite)';
+    b.style.transform=isSel?'scale(1.15)':'scale(1)';
+  });
+  document.querySelectorAll('.av-col-btn').forEach(b=>{
+    b.style.border='3px solid transparent';b.style.boxShadow='none';
+  });
+}
+
+function selectAvatarColor(col){
+  _pendingAvatar={type:'color',val:col};
+  const name=_avatarPickerTarget||'';
+  const prev=document.getElementById('av-big-preview');
+  if(prev){prev.style.background=col;prev.textContent=ini2(name);prev.style.fontSize='32px';}
+  const sub=document.getElementById('av-preview-sub');
+  if(sub)sub.textContent='Color seleccionado — pulsa Guardar';
+  document.querySelectorAll('.av-col-btn').forEach(b=>{
+    const isSel=b.dataset.col===col;
+    b.style.border=isSel?'3px solid #fff':'3px solid transparent';
+    b.style.boxShadow=isSel?'0 0 0 2px var(--grass)':'none';
+  });
+  document.querySelectorAll('.av-em-btn').forEach(b=>{
+    b.style.borderColor='var(--border)';b.style.background='var(--offwhite)';b.style.transform='scale(1)';
+  });
+}
+
+function resetAvatar(){
+  _pendingAvatar={type:'reset'};
+  const name=_avatarPickerTarget||'';
+  const prev=document.getElementById('av-big-preview');
+  if(prev){prev.textContent=ini2(name);prev.style.background=jColor(name);prev.style.fontSize='32px';}
+  document.querySelectorAll('.av-em-btn').forEach(b=>{
+    b.style.borderColor='var(--border)';b.style.background='var(--offwhite)';b.style.transform='scale(1)';
+  });
+  document.querySelectorAll('.av-col-btn').forEach(b=>{
+    b.style.border='3px solid transparent';b.style.boxShadow='none';
+  });
+}
+
+function guardarAvatarEditor(){
+  if(!_avatarPickerTarget){showToast('Selecciona tu nombre primero');return;}
+  const k=_avatarPickerTarget.trim().toLowerCase();
+  if(!jugadores[k]) jugadores[k]={name:_avatarPickerTarget,partidos:0,ganados:0,perdidos:0,empatados:0,goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
+  const j=jugadores[k];
+
+  if(_pendingAvatar){
+    if(_pendingAvatar.type==='emoji'){j.avatarEmoji=_pendingAvatar.val;delete j.avatarColor;}
+    else if(_pendingAvatar.type==='color'){j.avatarColor=_pendingAvatar.val;delete j.avatarEmoji;}
+    else if(_pendingAvatar.type==='reset'){delete j.avatarEmoji;delete j.avatarColor;}
+  }
+
+  saveCloud();
+  renderJugadoresEnhanced();
+  showToast('✓ Avatar guardado para '+_avatarPickerTarget);
+  setTimeout(()=>{
+    showScreen('jugadores',document.querySelector('[data-screen=jugadores]'));
+  },800);
 }
 
 /* ===== CSS ===== */
