@@ -137,9 +137,24 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 .mh-no-conv p{font-size:11px;color:rgba(184,246,58,.4);letter-spacing:.08em;text-transform:uppercase}
 
 /* ── SCREENS ── */
-.screen{display:none}
-.screen.active{display:block}
-.screens{padding-bottom:20px}
+.screen{
+  display:block;
+  opacity:0;
+  visibility:hidden;
+  position:absolute;
+  top:0;left:0;right:0;
+  pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease;
+  transform:translateY(6px);
+}
+.screen.active{
+  opacity:1;
+  visibility:visible;
+  position:relative;
+  pointer-events:auto;
+  transform:translateY(0);
+}
+.screens{padding-bottom:20px;position:relative}
 
 /* ── GENERIC UI ── */
 .sec{margin-bottom:0}
@@ -1648,31 +1663,11 @@ const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes 
 
 function showScreen(id,btn){
   if(btn&&btn.disabled)return;
-  // Fade out current screen
-  const current=document.querySelector('.screen.active');
-  if(current&&current.id!=='sc-'+id){
-    current.style.opacity='0';
-    current.style.transform='translateY(6px)';
-  }
+  // CSS handles the fade — just swap the active class
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nb,.snb').forEach(b=>b.classList.remove('active'));
-  setTimeout(function(){
-    document.querySelectorAll('.screen').forEach(s=>{
-      s.classList.remove('active');
-      s.style.opacity='';s.style.transform='';
-    });
-    const next=document.getElementById('sc-'+id);
-    if(next){
-      next.style.opacity='0';next.style.transform='translateY(8px)';
-      next.classList.add('active');
-      requestAnimationFrame(function(){
-        requestAnimationFrame(function(){
-          next.style.transition='opacity .22s ease,transform .22s ease';
-          next.style.opacity='1';next.style.transform='translateY(0)';
-          setTimeout(function(){next.style.transition='';next.style.opacity='';next.style.transform='';},240);
-        });
-      });
-    }
-  },80);
+  const next=document.getElementById('sc-'+id);
+  if(next) next.classList.add('active');
   if(btn)btn.classList.add('active');
   // sync both navs
   document.querySelectorAll('[data-screen="'+id+'"]').forEach(b=>{if(!b.disabled)b.classList.add('active')});
@@ -2662,7 +2657,14 @@ function renderJugadoresEnhanced(){
           '</div>'
         ).join('')+
       '</div>'+
-    '</div>';
+    '</div>'+
+    '<div style="padding:6px 14px 10px;border-top:1px solid var(--border)">'+
+        '<button class="av-btn" data-jn="'+j.name.replace(/"/g,'&quot;')+'" '+
+          'onclick="event.stopPropagation();abrirAvatarPicker(this.dataset.jn)" '+
+          'style="border:1px dashed var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;'+
+          'padding:5px 12px;font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px">'+
+          '<i class=\"ti ti-user-circle\" style=\"font-size:13px\"></i> Cambiar avatar</button>'+
+      '</div>';
   }).join('');
 }
 
@@ -5508,12 +5510,16 @@ function selectAvatarColor(col){
 function buildAvatarToken(name){
   var av=renderAvatarCircle(name,42,13);
   var sn=name.replace(/"/g,'&quot;');
-  var btn='<button onclick="event.stopPropagation();abrirAvatarPicker(this.getAttribute(\"data-an\"))" data-an="'+sn+'" '+
-    'style="position:absolute;bottom:-2px;right:-2px;width:18px;height:18px;'+
-    'border-radius:50%;background:var(--grass);border:2px solid var(--card);'+
-    'cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">'+
-    '<i class="ti ti-pencil" style="font-size:9px;color:#fff"></i></button>';
-  return '<div style="position:relative;flex-shrink:0">'+av+btn+'</div>';
+  // Wrap the whole avatar in a tappable div that opens picker
+  return '<div style="position:relative;flex-shrink:0;cursor:pointer" '+
+    'onclick="event.stopPropagation();abrirAvatarPicker(\''+sn+'\')" '+
+    'title="Cambiar avatar">'+
+    av+
+    '<div style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;'+
+    'border-radius:50%;background:var(--grass);border:1.5px solid var(--card);'+
+    'display:flex;align-items:center;justify-content:center;pointer-events:none">'+
+    '<i class="ti ti-pencil" style="font-size:8px;color:#fff"></i></div>'+
+  '</div>';
 }
 
 function buildAvatarTokenPerfil(name){
@@ -5571,10 +5577,17 @@ let _notifPermission = 'default';
 async function initPushNotifications(){
   if(!('Notification' in window)) return;
   _notifPermission = Notification.permission;
-  if(_notifPermission === 'default'){
-    // Show a friendly banner asking for permission
-    mostrarBannerNotif();
+  // Already granted — nothing to do
+  if(_notifPermission === 'granted'){
+    localStorage.setItem('pg_notif','1');
+    return;
   }
+  // Already denied — don't ask again
+  if(_notifPermission === 'denied') return;
+  // Already dismissed this session
+  if(sessionStorage.getItem('notif_banner_shown')) return;
+  // Show banner after 3s
+  mostrarBannerNotif();
 }
 
 function mostrarBannerNotif(){
