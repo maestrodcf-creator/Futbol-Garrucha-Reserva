@@ -2013,36 +2013,82 @@ function confirmarInscMulti(){
   }
   const c=convocatorias.find(x=>x.id===_inscConvId);
   if(!c)return;
-  if((selPos_==='portero'||selPos_==='portero-jugador')&&
-     (c.players||[]).filter(p=>p.pos==='portero'||p.pos==='portero-jugador').length>=2){
-    showToast('Ya hay 2 porteros. Elige otra posicion.');return;
-  }
+  if(c.status!=='abierta'){showToast('Las inscripciones están cerradas');closeModal('modal-insc');return;}
+
   _myName=name.trim();
   try{localStorage.setItem('pg_myname',_myName);}catch(e){}
+
+  if(selConf_==='no'){closeModal('modal-insc');showToast('Anotado como No puedo ir');return;}
+
   if(selConf_==='tv'||selConf_==='tal_vez'){
     if(!c.talvez)c.talvez=[];
+    const yaTv=(c.talvez||[]).some(p=>p.name.trim().toLowerCase()===_myName.trim().toLowerCase());
+    if(yaTv){showToast('Ya estás en la lista de tal vez');closeModal('modal-insc');return;}
     c.talvez.push({name:_myName,pos:selPos_,rol:'tv'});
-    closeModal('modal-insc');saveCloud();renderInicioMulti();
+    closeModal('modal-insc');
+    saveCloud();renderInicioMulti();
     showToast('Apuntado como Tal vez');return;
   }
-  if(selConf_==='no'){closeModal('modal-insc');showToast('Anotado como No puedo ir');return;}
-  const tit=getConvTit(c),sup=getConvSup(c),MT=c.MT||(c.tipo==='sala'?12:14);
-  // Duplicate check
-  const yaApuntado=(c.players||[]).some(p=>p.name.trim().toLowerCase()===_myName.trim().toLowerCase());
-  if(yaApuntado){showToast('Ya estás apuntado');closeModal('modal-insc');return;}
-  let rol;
-  if(tit.length<MT)rol='tit';
-  else if(sup.length<2)rol='sup';
-  else{showToast('No quedan plazas');closeModal('modal-insc');return;}
-  const now=new Date();
-  const dorEl=document.getElementById('inp-dorsal');
-  if(!c.players)c.players=[];
-  c.players.push({name:_myName,pos:selPos_,rol,dor:dorEl?dorEl.value:'',
-    time:now.getHours()+':'+String(now.getMinutes()).padStart(2,'0')});
+
+  // Show loading state
+  const btnConf=document.getElementById('btn-confirmar-insc');
+  if(btnConf){btnConf.disabled=true;btnConf.textContent='Guardando...';}
   closeModal('modal-insc');
-  saveCloud();renderInicioMulti();
-  showToast(rol==='tit'?'Apuntado como titular':'Sin plazas, apuntado como suplente');
+  showToast('Inscribiendo...');
+
+  // SAFE INSCRIPTION: read fresh from Supabase before writing
+  _inscribirSeguro(_inscConvId, _myName, selPos_);
 }
+
+async function _inscribirSeguro(cid, nombre, pos){
+  try{
+    // 1. Read fresh convocatorias from Supabase
+    const fresco = await sbLoad('convocatorias');
+    if(fresco) convocatorias = fresco;
+
+    const c = convocatorias.find(x=>x.id===cid);
+    if(!c){showToast('Convocatoria no encontrada');return;}
+    if(c.status!=='abierta'){showToast('Las inscripciones ya están cerradas');renderInicioMulti();return;}
+
+    // 2. Check again with fresh data
+    const yaApuntado=(c.players||[]).some(p=>p.name.trim().toLowerCase()===nombre.trim().toLowerCase());
+    if(yaApuntado){showToast('Ya estás apuntado ✓');renderInicioMulti();return;}
+
+    // 3. Check portero limit
+    if((pos==='portero'||pos==='portero-jugador')&&
+       (c.players||[]).filter(p=>p.pos==='portero'||p.pos==='portero-jugador').length>=2){
+      showToast('Ya hay 2 porteros. Elige otra posición.');renderInicioMulti();return;
+    }
+
+    // 4. Assign role
+    const MT=c.MT||(c.tipo==='sala'?12:14);
+    const tit=(c.players||[]).filter(p=>p.rol==='tit');
+    const sup=(c.players||[]).filter(p=>p.rol==='sup');
+    let rol;
+    if(tit.length<MT)rol='tit';
+    else if(sup.length<2)rol='sup';
+    else{showToast('No quedan plazas');renderInicioMulti();return;}
+
+    // 5. Push and save
+    const now=new Date();
+    if(!c.players)c.players=[];
+    c.players.push({
+      name:nombre, pos:pos, rol:rol,
+      time:now.getHours()+':'+String(now.getMinutes()).padStart(2,'0')
+    });
+
+    // 6. Save only convocatorias (atomic)
+    await sbSave('convocatorias', convocatorias);
+    renderInicioMulti();
+    showToast(rol==='tit'?'✓ Apuntado como titular':'Sin plazas, apuntado como suplente');
+
+  }catch(e){
+    showToast('Error al inscribirse. Inténtalo de nuevo.');
+    console.error('Inscripción error:',e);
+    renderInicioMulti();
+  }
+}
+
 function salirDeConv(cid){
   const c=convocatorias.find(x=>x.id===cid);
   if(!c||!_myName)return;
