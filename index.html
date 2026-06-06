@@ -2133,13 +2133,147 @@ async function _inscribirSeguro(cid, nombre, pos){
 function salirDeConv(cid){
   const c=convocatorias.find(x=>x.id===cid);
   if(!c||!_myName)return;
-  const wasTit2=(c.players||[]).some(p=>p.name===_myName&&p.rol==='tit');
+
+  const wasTit=(c.players||[]).some(p=>p.name===_myName&&p.rol==='tit');
+  const MT=c.MT||(c.tipo==='sala'?12:14);
+  const estaLlena=getConvTit(c).length>=MT;
+
+  // Save suplente info BEFORE removing
+  const suplentes=getConvSup(c);
+  const sup1=suplentes.length>0?suplentes[0].name:null;
+  const sup2=suplentes.length>1?suplentes[1].name:null;
+
+  // Remove from list
   c.players=(c.players||[]).filter(p=>p.name!==_myName);
   c.talvez=(c.talvez||[]).filter(p=>p.name!==_myName);
-  if(wasTit2)promoverSuplente(c);
-  saveCloud();renderInicioMulti();showToast('Has cancelado tu inscripcion');
+
+  // Promote suplente if was titular and list was full
+  let promovido=null;
+  if(wasTit&&estaLlena&&sup1){
+    const idx=c.players.findIndex(p=>p.name===sup1&&p.rol==='sup');
+    if(idx>=0){
+      c.players[idx].rol='tit';
+      c.players[idx].promotedAt=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      promovido=sup1;
+    }
+  } else if(wasTit){
+    promoverSuplente(c);
+    const newTit=getConvTit(c);
+    // find who was just promoted (last promoted)
+    const p2=c.players.find(p=>p.rol==='tit'&&p.promotedAt);
+    if(p2)promovido=p2.name;
+  }
+
+  saveCloud();
+  renderInicioMulti();
+  showToast('Has cancelado tu inscripcion');
+
+  // Show WA share modal if was titular and list was full
+  if(wasTit&&estaLlena){
+    const nuevoSup1=getConvSup(c).length>0?getConvSup(c)[0].name:null;
+    mostrarModalSalida(_myName, promovido, nuevoSup1, c);
+  }
+}
+
+function mostrarModalSalida(quien, entra, nuevoSup1, c){
+  const tipo=c.tipo==='sala'?'Fútbol Sala':'Fútbol 7';
+  const fecha=convFechaCompleta(c);
+  const hora=c.hora||'';
+
+  // Build WhatsApp message
+  var lines=[];
+  lines.push('\u26A0\uFE0F CAMBIO EN LA CONVOCATORIA');
+  lines.push('');
+  lines.push(tipo+' \u2014 '+fecha+' \u00B7 '+hora);
+  if(c.lugar)lines.push(c.lugar);
+  lines.push('');
+  lines.push('\u274C *'+quien+'* se cae de la lista por motivos personales.');
+  if(entra){
+    lines.push('');
+    lines.push('\u2705 *'+entra+'* entra como titular.');
+    if(nuevoSup1)lines.push('\uD83D\uDCCB *'+nuevoSup1+'* pasa a suplente 1.');
+  } else {
+    lines.push('');
+    lines.push('\uD83D\uDCCB Queda una plaza libre de titular.');
+  }
+  lines.push('');
+  lines.push('\uD83D\uDD17 '+location.href.split('?')[0]);
+  var msg=lines.join('\n');
+  const waUrl='https://wa.me/?text='+encodeURIComponent(msg);
+
+  // Create modal
+  let modal=document.getElementById('modal-salida-conv');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modal-salida-conv';
+    modal.className='modal-bg';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML=
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<div style="width:40px;height:40px;border-radius:50%;background:rgba(192,57,43,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+        '<i class="ti ti-user-minus" style="font-size:20px;color:var(--red)"></i>'+
+      '</div>'+
+      '<div>'+
+        '<div style="font-weight:700;font-size:16px">Has salido de la lista</div>'+
+        '<div style="font-size:12px;color:var(--muted);margin-top:2px">'+tipo+' · '+fecha+'</div>'+
+      '</div>'+
+    '</div>'+
+
+    (entra?
+      '<div style="background:rgba(34,136,61,.08);border:1px solid rgba(34,136,61,.2);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--grass);margin-bottom:8px">Cambios automáticos</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+          '<i class="ti ti-user-minus" style="color:var(--red);font-size:14px"></i>'+
+          '<span style="font-size:13px;color:var(--dark)"><strong>'+quien+'</strong> sale de titulares</span>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(nuevoSup1?'6':'0')+'px">'+
+          '<i class="ti ti-user-plus" style="color:var(--grass);font-size:14px"></i>'+
+          '<span style="font-size:13px;color:var(--dark)"><strong>'+entra+'</strong> entra como titular</span>'+
+        '</div>'+
+        (nuevoSup1?
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<i class="ti ti-user" style="color:var(--muted);font-size:14px"></i>'+
+            '<span style="font-size:13px;color:var(--muted)"><strong>'+nuevoSup1+'</strong> pasa a suplente 1</span>'+
+          '</div>':'')+
+      '</div>':
+      '<div style="background:var(--offwhite);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted)">'+
+        'No hay suplentes. Queda una plaza libre.'+
+      '</div>'
+    )+
+
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">'+
+      'Comparte en el grupo de WhatsApp para informar del cambio:'+
+    '</div>'+
+
+    '<a href="'+waUrl+'" target="_blank" '+
+      'style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;'+
+      'background:#25D366;color:#fff;font-size:14px;font-weight:700;text-decoration:none;'+
+      'border-radius:var(--r-sm);margin-bottom:10px">'+
+      '<i class="ti ti-brand-whatsapp" style="font-size:18px"></i> Compartir en WhatsApp'+
+    '</a>'+
+
+        '<button class="btn-outline" id="btn-cerrar-salida">Cerrar sin compartir</button>'+
+    '</div>';
+
+  openModal('modal-salida-conv');
+  setTimeout(function(){
+    var btn=document.getElementById('btn-cerrar-salida');
+    if(btn)btn.onclick=function(){closeModal('modal-salida-conv');};
+  },50);
 }
 function verListaConv(cid){
+  const c=convocatorias.find(x=>x.id===cid);if(!c)return;
+  // Refresh jugadores (avatars) from Supabase silently before rendering
+  sbLoad('jugadores').then(function(jug){
+    if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
+    _renderVerListaConv(cid);
+  }).catch(function(){ _renderVerListaConv(cid); });
+}
+function _renderVerListaConv(cid){
   const c=convocatorias.find(x=>x.id===cid);if(!c)return;
   const tit=getConvTit(c);
   const sup=getConvSup(c);
@@ -5979,7 +6113,6 @@ window.addEventListener('load',function(){
     startTimerTick();
     startRealtime();
     hideSplash();
-    setTimeout(initPushNotifications,3000);
   }).catch(function(e){
     console.error('loadCloud error:',e);
     hideSplash();
