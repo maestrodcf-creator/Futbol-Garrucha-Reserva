@@ -2471,6 +2471,9 @@ function renderOrgPanel(){
                 '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)" style="color:var(--blue)">'+
                   '<i class="ti ti-pencil"></i> Editar'+
                 '</button>'+
+                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgAnadirExterno(this.dataset.cid)" style="color:var(--grass)">'+
+                  '<i class="ti ti-user-plus"></i> Añadir jugador'+
+                '</button>'+
                 '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)" style="color:#b8860b">'+
                   '<i class="ti ti-layout-pitch"></i> Equipos'+
                 '</button>'+
@@ -6066,6 +6069,127 @@ function guardarAvatarEditor(){
   setTimeout(()=>{
     showScreen('jugadores',document.querySelector('[data-screen=jugadores]'));
   },800);
+}
+
+/* ===== AÑADIR JUGADOR EXTERNO (ORGANIZADOR) ===== */
+function orgAnadirExterno(cid){
+  const c=convocatorias.find(x=>x.id===cid);
+  if(!c){showToast('Convocatoria no encontrada');return;}
+
+  let modal=document.getElementById('modal-add-externo');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modal-add-externo';
+    modal.className='modal-bg';
+    document.body.appendChild(modal);
+  }
+
+  const tit=getConvTit(c);
+  const sup=getConvSup(c);
+  const MT=c.MT||(c.tipo==='sala'?12:14);
+  const libre=MT-tit.length;
+  const tipo=c.tipo==='sala'?'Fútbol Sala':'Fútbol 7';
+
+  modal.innerHTML=
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<h2 style="margin-bottom:4px">Añadir jugador externo</h2>'+
+    '<p class="msub">'+tipo+' · '+convFechaCompleta(c)+'</p>'+
+
+    '<div style="background:var(--offwhite);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);display:flex;gap:16px">'+
+      '<span><strong style="color:var(--dark)">'+tit.length+'/'+MT+'</strong> titulares</span>'+
+      '<span><strong style="color:var(--dark)">'+sup.length+'</strong> suplentes</span>'+
+      '<span><strong style="color:'+(libre>0?'var(--grass)':'var(--red)')+'">'+
+        (libre>0?libre+' plazas libres':'Lista completa')+
+      '</strong></span>'+
+    '</div>'+
+
+    '<div style="margin-bottom:12px">'+
+      '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px">Nombre del jugador</label>'+
+      '<input id="inp-externo-nombre" type="text" placeholder="Ej: Carlos García" '+
+        'style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:11px 14px;font-size:14px;font-weight:600;box-sizing:border-box;outline:none" '+
+        'onkeydown="if(event.key===\'Enter\')confirmarAnadirExterno()">'+
+    '</div>'+
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
+      '<div>'+
+        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px">Posición</label>'+
+        '<select id="sel-externo-pos" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;box-sizing:border-box">'+
+          '<option value="medio">Jugador</option>'+
+          '<option value="portero">Portero</option>'+
+          '<option value="defensa">Defensa</option>'+
+          '<option value="delantero">Delantero</option>'+
+        '</select>'+
+      '</div>'+
+      '<div>'+
+        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px">Plaza</label>'+
+        '<select id="sel-externo-rol" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;box-sizing:border-box">'+
+          '<option value="auto">Automático</option>'+
+          (libre>0?'<option value="tit">Titular</option>':'')+
+          '<option value="sup">Suplente</option>'+
+        '</select>'+
+      '</div>'+
+    '</div>'+
+
+    '<div style="display:flex;gap:8px">'+
+      '<button class="btn-green" style="flex:1" id="btn-confirm-externo" onclick="confirmarAnadirExterno()">'+
+        '<i class="ti ti-user-plus"></i> Añadir'+
+      '</button>'+
+      '<button class="btn-outline" style="flex:1" id="btn-cancel-externo">Cancelar</button>'+
+    '</div>'+
+    '</div>';
+
+  openModal('modal-add-externo');
+  setTimeout(function(){
+    var inp=document.getElementById('inp-externo-nombre');
+    if(inp)inp.focus();
+    var btn=document.getElementById('btn-cancel-externo');
+    if(btn)btn.onclick=function(){closeModal('modal-add-externo');};
+    // Store cid for confirm
+    modal.dataset.cid=cid;
+  },50);
+}
+
+function confirmarAnadirExterno(){
+  const modal=document.getElementById('modal-add-externo');
+  const cid=modal?modal.dataset.cid:'';
+  const c=convocatorias.find(x=>x.id===cid);
+  if(!c)return;
+
+  const inp=document.getElementById('inp-externo-nombre');
+  const nombre=(inp?inp.value:'').trim();
+  if(!nombre){
+    if(inp){inp.style.borderColor='var(--red)';inp.focus();}
+    showToast('Escribe el nombre del jugador');return;
+  }
+
+  // Check duplicate
+  const yaApuntado=(c.players||[]).some(p=>p.name.trim().toLowerCase()===nombre.toLowerCase());
+  if(yaApuntado){showToast(nombre+' ya está apuntado');return;}
+
+  const MT=c.MT||(c.tipo==='sala'?12:14);
+  const tit=getConvTit(c);
+  const selRol=document.getElementById('sel-externo-rol');
+  const selPos=document.getElementById('sel-externo-pos');
+  let rol=selRol?selRol.value:'auto';
+  const pos=selPos?selPos.value:'medio';
+
+  if(rol==='auto') rol=tit.length<MT?'tit':'sup';
+
+  if(!c.players)c.players=[];
+  c.players.push({
+    name:nombre,
+    pos:pos,
+    rol:rol,
+    externo:true,
+    time:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})
+  });
+
+  saveCloud();
+  closeModal('modal-add-externo');
+  renderOrgPanel();
+  renderInicioMulti();
+  showToast((rol==='tit'?'✓ Titular: ':'Suplente: ')+nombre+' añadido');
 }
 
 /* ===== CSS ===== */
