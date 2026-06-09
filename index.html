@@ -540,6 +540,9 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <!-- Conv activa o vacío -->
         <div id="conv-list"></div>
 
+        <!-- PRÓXIMAS CONVOCATORIAS (programadas) -->
+        <div id="proximas-section" style="margin-top:16px"></div>
+
         <!-- PARTIDOS DE LA TEMPORADA -->
         <div id="partidos-temporada-section" style="margin-top:24px"></div>
         <div id="inicio-conv-block">
@@ -787,9 +790,28 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   Las inscripciones se cierran automáticamente a la hora de inicio del partido.
   Usa los campos de arriba para forzar un cierre anterior si lo necesitas.
 </p>
-            <button class="btn-green" style="margin-top:10px" onclick="crearNuevaConv()">
-              <i class="ti ti-plus"></i> Crear convocatoria
+            <button class="btn-green" style="margin-top:10px;width:100%" onclick="crearNuevaConv()">
+              <i class="ti ti-send"></i> Publicar ahora
             </button>
+          <button class="btn-outline" style="margin-top:6px;width:100%" onclick="guardarBorrador()">
+              <i class="ti ti-file-text"></i> Guardar borrador privado
+            </button>
+          <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px"><i class="ti ti-alarm" style="font-size:11px"></i> Publicación automática</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+              <div>
+                <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Fecha publicar</label>
+                <input id="pub-fecha" type="text" placeholder="08/06/2026" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 9px;font-size:12px;box-sizing:border-box">
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Hora publicar</label>
+                <input id="pub-hora" type="time" value="18:00" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 9px;font-size:12px;box-sizing:border-box">
+              </div>
+            </div>
+            <button class="btn-outline" style="width:100%" onclick="programarPublicacion()">
+              <i class="ti ti-clock-play"></i> Guardar y programar
+            </button>
+          </div>
             <button class="btn-outline" style="margin-top:8px" onclick="guardarPlantilla()">
               <i class="ti ti-bookmark"></i> Guardar como plantilla
             </button>
@@ -804,6 +826,9 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
       <!-- ══ COLUMNA DERECHA: Gestionar convocatorias + Registro ══ -->
       <div>
+        <!-- BORRADORES / RESERVAS PRIVADAS -->
+        <div id="org-borradores-section" style="margin-bottom:20px"></div>
+
         <div class="sec-label"><i class="ti ti-calendar"></i> Convocatorias activas</div>
         <div id="org-convs-list">
           <div class="card"><div class="card-section"><div class="empty-st" style="padding:20px">
@@ -1755,14 +1780,16 @@ async function saveCloud(){
     sbSave('pagos',pagos),
     sbSave('pin',PIN),
     sbSave('listaNegra',listaNegra),
+    sbSave('borradores',borradores),
   ]);
 }
 async function loadCloud(){
   const ss=document.getElementById('splash-status');
   if(ss)ss.textContent='Conectando...';
-  const [convs,jug,hist,plts,pgs,savedPin,ln]=await Promise.all([
+  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs]=await Promise.all([
     sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
     sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),sbLoad('listaNegra'),
+    sbLoad('borradores'),
   ]);
   if(convs){convocatorias=convs;}
   if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
@@ -1771,6 +1798,13 @@ async function loadCloud(){
   if(pgs){Object.keys(pagos).forEach(k=>delete pagos[k]);Object.assign(pagos,pgs);}
   if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
   if(ln&&Array.isArray(ln)){listaNegra=ln;}
+  if(bdrs&&Array.isArray(bdrs)){borradores=bdrs;}
+  // Re-schedule any pending auto-publishes
+  borradores.filter(b=>b.status==='programado'&&b.publicarAt).forEach(b=>{
+    const diff=new Date(b.publicarAt)-new Date();
+    if(diff>0)setTimeout(function(){_publicarBorrador(b.id);},diff);
+    else if(diff>-300000)_publicarBorrador(b.id); // within 5min past = publish now
+  });
   if(ss)ss.textContent='Listo ✓';
 }
 function startRealtime(){
@@ -2577,6 +2611,7 @@ function renderOrgPanel(){
   renderListaNegra();
   renderPlantillas();
   renderOrgHistorial();
+  renderOrgBorradores();
   syncCalFromConvs();
   if(typeof renderCalendar==='function')renderCalendar();
 }
@@ -6115,7 +6150,7 @@ function orgAnadirExterno(cid){
       '<div>'+
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px">Posición</label>'+
         '<select id="sel-externo-pos" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;box-sizing:border-box">'+
-          '<option value="medio">Jugador</option>'+
+          '<option value="medio">Medio</option>'+
           '<option value="portero">Portero</option>'+
           '<option value="defensa">Defensa</option>'+
           '<option value="delantero">Delantero</option>'+
@@ -6192,6 +6227,292 @@ function confirmarAnadirExterno(){
   showToast((rol==='tit'?'✓ Titular: ':'Suplente: ')+nombre+' añadido');
 }
 
+/* ===== BORRADORES Y PUBLICACION PROGRAMADA ===== */
+let borradores = [];
+
+function _recogerDatosForm(){
+  return {
+    lugar:   (document.getElementById('new-lugar')||{}).value||'',
+    dia:     (document.getElementById('new-dia')||{}).value||'Lunes',
+    diames:  (document.getElementById('new-diames')||{}).value||'',
+    hora:    (document.getElementById('new-hora')||{}).value||'20:00',
+    maps:    (document.getElementById('new-maps')||{}).value||'',
+    coste:   (document.getElementById('new-coste')||{}).value||'',
+    tipo:    (document.getElementById('new-tipo')||{}).value||'sala',
+    MT:      parseInt((document.getElementById('new-mt')||{}).value||0)||0,
+  };
+}
+
+function guardarBorrador(){
+  const d = _recogerDatosForm();
+  if(!d.lugar.trim()){showToast('Indica el lugar primero');return;}
+  const borrador = {
+    id: 'bdr_'+Date.now(),
+    ...d,
+    status: 'borrador',
+    players: [],
+    creadoAt: new Date().toISOString(),
+    nota: ''
+  };
+  borradores.push(borrador);
+  saveCloud();
+  renderOrgPanel();
+  showToast('\uD83D\uDCCB Borrador guardado — solo visible para el organizador');
+}
+
+function programarPublicacion(){
+  const d = _recogerDatosForm();
+  if(!d.lugar.trim()){showToast('Indica el lugar primero');return;}
+
+  const fechaEl = document.getElementById('pub-fecha');
+  const horaEl  = document.getElementById('pub-hora');
+  const fechaTxt = fechaEl ? fechaEl.value.trim() : '';
+  const horaTxt  = horaEl  ? horaEl.value.trim()  : '';
+
+  if(!fechaTxt||!horaTxt){showToast('Indica fecha y hora de publicaci\u00f3n');return;}
+
+  // Parse DD/MM/YYYY
+  const parts = fechaTxt.split('/');
+  if(parts.length !== 3){showToast('Formato de fecha: DD/MM/YYYY');return;}
+  const pubDate = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]),
+    parseInt(horaTxt.split(':')[0]), parseInt(horaTxt.split(':')[1]));
+
+  if(isNaN(pubDate.getTime())||pubDate<=new Date()){
+    showToast('La fecha/hora de publicaci\u00f3n debe ser futura');return;
+  }
+
+  const borrador = {
+    id: 'bdr_'+Date.now(),
+    ...d,
+    status: 'programado',
+    players: [],
+    creadoAt: new Date().toISOString(),
+    publicarAt: pubDate.toISOString(),
+    nota: ''
+  };
+  borradores.push(borrador);
+  saveCloud();
+  renderOrgPanel();
+  renderProximasConvocatorias&&renderProximasConvocatorias();
+
+  const diff = pubDate - new Date();
+  setTimeout(function(){ _publicarBorrador(borrador.id); }, diff);
+
+  const fechaStr = pubDate.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  const horaStr  = pubDate.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  showToast('\u23F0 Programado para el '+fechaStr+' a las '+horaStr);
+}
+
+function _publicarBorrador(bdrId){
+  const idx = borradores.findIndex(b=>b.id===bdrId);
+  if(idx<0)return;
+  const b = borradores[idx];
+
+  // Build real conv from borrador
+  const MT = b.MT||(b.tipo==='sala'?12:14);
+  const DIAS_MAP = {Lunes:1,Martes:2,Miércoles:3,Jueves:4,Viernes:5,Sábado:6,Domingo:0};
+  const now = new Date();
+  let cierreAt = null;
+  try{
+    const horaP = b.hora.split(':');
+    const dt = new Date(); dt.setHours(parseInt(horaP[0]),parseInt(horaP[1]),0,0);
+    if(b.diames){ dt.setDate(parseInt(b.diames)); }
+    else if(DIAS_MAP[b.dia]!==undefined){
+      const diff=(DIAS_MAP[b.dia]-now.getDay()+7)%7||7;
+      dt.setDate(now.getDate()+diff);
+    }
+    dt.setMinutes(dt.getMinutes()-30); // close 30min before kickoff
+    cierreAt=dt.toISOString();
+  }catch(e){}
+
+  const conv = {
+    id:       'cv_'+Date.now(),
+    tipo:     b.tipo,
+    dia:      b.dia,
+    diames:   b.diames,
+    hora:     b.hora,
+    lugar:    b.lugar,
+    maps:     b.maps,
+    coste:    b.coste,
+    MT:       MT,
+    status:   'abierta',
+    players:  [],
+    creadoAt: new Date().toISOString(),
+    cierreAt: cierreAt,
+  };
+
+  convocatorias.push(conv);
+  borradores.splice(idx,1);
+  saveCloud();
+  syncCalFromConvs();
+  if(typeof renderCalendar==='function')renderCalendar();
+  renderOrgPanel();
+  renderInicioMulti();
+  showToast('\uD83D\uDFE2 Convocatoria publicada autom\u00e1ticamente');
+}
+
+function publicarBorradorAhora(bdrId){
+  _publicarBorrador(bdrId);
+}
+
+function editarBorrador(bdrId){
+  const b = borradores.find(x=>x.id===bdrId);
+  if(!b)return;
+  // Fill form with borrador data
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el)el.value=v; };
+  set('new-lugar',  b.lugar);
+  set('new-dia',    b.dia);
+  set('new-diames', b.diames);
+  set('new-hora',   b.hora);
+  set('new-maps',   b.maps||'');
+  set('new-coste',  b.coste||'');
+  // Scroll to form
+  const form = document.querySelector('.org-col-izq');
+  if(form) form.scrollIntoView({behavior:'smooth'});
+  showToast('Datos cargados en el formulario — edita y vuelve a guardar');
+}
+
+function borrarBorrador(bdrId){
+  if(!confirm('Eliminar este borrador?'))return;
+  borradores = borradores.filter(b=>b.id!==bdrId);
+  saveCloud();
+  renderOrgPanel();
+  showToast('Borrador eliminado');
+}
+
+function renderOrgBorradores(){
+  const el = document.getElementById('org-borradores-section');
+  if(!el) return;
+  if(!borradores.length){ el.innerHTML=''; return; }
+
+  const ahora = new Date();
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<div class="sec-label" style="margin:0"><i class="ti ti-file-text" style="color:var(--muted)"></i> Borradores y programadas</div>'+
+      '<span style="font-size:11px;color:var(--muted)">Solo visible para el organizador</span>'+
+    '</div>'+
+    borradores.map(b=>{
+      const isProg = b.status==='programado';
+      const pubDate = isProg ? new Date(b.publicarAt) : null;
+      const pubStr  = pubDate ? pubDate.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})+' '+
+        pubDate.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : '';
+      const tiempoRestante = pubDate ? _tiempoRestante(pubDate) : '';
+
+      return '<div class="card" style="margin-bottom:8px;border:1.5px solid '+(isProg?'rgba(184,246,58,.25)':'var(--border)')+';opacity:.9">'+
+        '<div style="padding:10px 14px">'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+            '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(isProg?'rgba(184,246,58,.1)':'rgba(0,0,0,.05)')+';color:'+(isProg?'var(--lime)':'var(--muted)')+'">'+
+              (isProg?'\u23F0 PROGRAMADA':'\uD83D\uDCCB BORRADOR')+
+            '</span>'+
+            (isProg?'<span style="font-size:11px;color:var(--lime)">'+tiempoRestante+'</span>':'')+
+          '</div>'+
+          '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+
+            (b.tipo==='sala'?'F\u00fatbol Sala':'F\u00fatbol 7')+' \u2014 '+b.dia+(b.diames?' '+b.diames:'')+' \u00b7 '+b.hora+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+
+            b.lugar+(isProg?' \u00b7 Publicar: '+pubStr:'')+
+          '</div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
+            '<button class="org-action-btn" style="color:var(--grass)" data-bid="'+b.id+'" onclick="publicarBorradorAhora(this.dataset.bid)">'+
+              '<i class="ti ti-send"></i> Publicar ahora</button>'+
+            '<button class="org-action-btn" style="color:var(--blue)" data-bid="'+b.id+'" onclick="editarBorrador(this.dataset.bid)">'+
+              '<i class="ti ti-pencil"></i> Editar</button>'+
+            '<button class="org-action-btn red" data-bid="'+b.id+'" onclick="borrarBorrador(this.dataset.bid)">'+
+              '<i class="ti ti-trash"></i> Borrar</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+}
+
+function _tiempoRestante(date){
+  const diff = date - new Date();
+  if(diff<=0) return 'publicando...';
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  if(h>=24) return 'en '+Math.floor(h/24)+'d '+Math.floor(h%24)+'h';
+  if(h>0) return 'en '+h+'h '+m+'m';
+  return 'en '+m+' min';
+}
+
+/* ===== PRÓXIMAS CONVOCATORIAS (públicas, contador regresivo) ===== */
+let _proximasTimer = null;
+
+function renderProximasConvocatorias(){
+  const el = document.getElementById('proximas-section');
+  if(!el) return;
+
+  const prog = borradores.filter(b=>b.status==='programado'&&b.publicarAt);
+  if(!prog.length){ el.innerHTML=''; return; }
+
+  // Sort by publish date
+  prog.sort((a,b)=>new Date(a.publicarAt)-new Date(b.publicarAt));
+
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<div class="sec-label" style="margin:0"><i class="ti ti-calendar-event" style="color:var(--lime)"></i> Próximas convocatorias</div>'+
+    '</div>'+
+    prog.map(b=>{
+      const pubDate = new Date(b.publicarAt);
+      const tipo = b.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7';
+      const fecha = pubDate.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+      const horaP = pubDate.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+      return '<div class="card" data-pubat="'+b.publicarAt+'" style="margin-bottom:10px;border:1px solid rgba(184,246,58,.2)">'+
+        '<div style="height:3px;background:linear-gradient(90deg,rgba(184,246,58,.4),transparent)"></div>'+
+        '<div style="padding:12px 14px">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+            '<div>'+
+              '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+tipo+(b.lugar?' · '+b.lugar:'')+'</div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:3px">'+
+                'Partido: '+b.dia+(b.diames?' '+b.diames:'')+' · '+b.hora+
+              '</div>'+
+            '</div>'+
+            '<div style="text-align:right;flex-shrink:0">'+
+              '<div style="font-size:10px;color:var(--muted);margin-bottom:3px">Inscripciones abren</div>'+
+              '<div style="font-size:11px;font-weight:700;color:var(--lime)">'+fecha+' '+horaP+'</div>'+
+            '</div>'+
+          '</div>'+
+          // Countdown
+          '<div style="margin-top:10px;background:var(--pitch);border-radius:var(--r-sm);padding:10px 14px;display:flex;align-items:center;justify-content:space-between">'+
+            '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;letter-spacing:.07em">'+
+              '<i class="ti ti-clock-countdown" style="font-size:11px"></i> Tiempo hasta apertura'+
+            '</div>'+
+            '<div class="countdown-display" data-pubat="'+b.publicarAt+'" '+
+              'style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.06em">'+
+              _countdownStr(new Date(b.publicarAt))+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+
+  // Start countdown timer
+  if(_proximasTimer) clearInterval(_proximasTimer);
+  _proximasTimer = setInterval(function(){
+    document.querySelectorAll('.countdown-display').forEach(function(el){
+      const pubAt = new Date(el.dataset.pubat);
+      el.textContent = _countdownStr(pubAt);
+      if(pubAt <= new Date()){
+        clearInterval(_proximasTimer);
+        renderProximasConvocatorias();
+        renderInicioMulti();
+      }
+    });
+  }, 1000);
+}
+
+function _countdownStr(date){
+  const diff = date - new Date();
+  if(diff <= 0) return 'AHORA';
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  if(d > 0) return d+'d ' + String(h).padStart(2,'0') + 'h ' + String(m).padStart(2,'0') + 'm';
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -6228,6 +6549,7 @@ window.addEventListener('load',function(){
   loadCloud().then(function(){
     syncCalFromConvs();
     renderInicioMulti();
+    renderProximasConvocatorias();
     renderPartidosTemporada();
     renderJugadoresEnhanced();
     renderHistorialEnhanced();
