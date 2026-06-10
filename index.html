@@ -303,9 +303,9 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 .cal-month{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em}
 .cal-nav{border:none;background:none;cursor:pointer;color:var(--muted);padding:6px 10px;border-radius:var(--r-sm);font-size:18px;transition:background .15s}
 .cal-nav:hover{background:var(--offwhite)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;width:100%}
 .cal-day-name{text-align:center;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:4px 0}
-.cal-day{min-height:42px;border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;padding:4px 2px;cursor:default;position:relative;font-size:12px;font-weight:500;color:var(--muted)}
+.cal-day{min-height:48px;border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;padding:4px 2px;cursor:default;position:relative;font-size:12px;font-weight:500;color:var(--muted);overflow:hidden;box-sizing:border-box}
 .cal-day.in-month{color:var(--dark)}
 .cal-day.today{background:var(--offwhite)}
 .cal-day.today .cal-day-num{background:var(--grass);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700}
@@ -1482,13 +1482,27 @@ function renderCalendar(){
       const sc=e.scoreA!==undefined?(e.scoreA+':'+e.scoreB):'';
       return '<div class="cal-event-pip'+(jugado?' cal-event-past':'')+'">'+(sc?sc+' ':e.hora+' ')+e.label.split('—')[0].trim()+'</div>';
     }).join(''):'';
-    return`<div class="cal-day in-month ${todayCls} ${evCls}" onclick="${hasEv?`openCalEvent('${c.date}')`:''}" title="${hasEv?c.events[0].label:''}">
-      <div class="cal-day-num">${c.day}</div>${evHtml}
-    </div>`;
+    var evColor=hasEv&&c.events[0].color?c.events[0].color:'';
+    var evBg=evColor?'background:'+evColor+'18;border:1px solid '+evColor+'44;':'';
+    var evNumColor=evColor?'color:'+evColor+';':'';
+    return '<div class="cal-day in-month '+todayCls+' '+evCls+'" '+
+      (hasEv?'data-caldate="'+c.date+'" ':'') +
+      'style="'+evBg+'" title="'+(hasEv?c.events[0].label.replace(/"/g,'')+c.events[0].hora:'')+'">' +
+      '<div class="cal-day-num" style="'+evNumColor+'">'+c.day+'</div>'+evHtml+
+    '</div>';
   }).join('');
 
   // Events list for current month
   const evList=document.getElementById('cal-events-list');
+  // Wire up calendar cell clicks via delegation
+  const grid2=document.getElementById('cal-grid');
+  if(grid2&&!grid2._calClickWired){
+    grid2._calClickWired=true;
+    grid2.addEventListener('click',function(e){
+      const cell=e.target.closest('[data-caldate]');
+      if(cell){const d=cell.getAttribute('data-caldate');if(d)openCalEvent(d);}
+    });
+  }
   const monthKeys=Object.keys(calEvents).filter(k=>k.startsWith(calYear+'-'+String(calMonth+1).padStart(2,'0')));
   if(!monthKeys.length){evList.innerHTML='<div class="empty-st" style="padding:20px 0"><i class="ti ti-calendar-off"></i><p>Sin convocatorias este mes</p></div>';return}
   monthKeys.sort();
@@ -3238,6 +3252,7 @@ function syncCalFromConvs(){
     if(!exists){
       calEvents[key].push({
         label:(h.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+' — '+h.scoreA+':'+h.scoreB,
+        color:getConvColor(h.id),
         hora:h.hora||'',
         tipo:h.tipo||'sala',
         lugar:h.lugar||'',
@@ -3271,6 +3286,7 @@ function syncCalFromConvs(){
             label:(b.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+' (programada)',
             hora:b.hora, tipo:b.tipo, lugar:b.lugar||'',
             bdrId:b.id, status:'programado', tipo_ev:'partido',
+            color:getConvColor(b.id),
           });
         }
       }
@@ -3285,6 +3301,7 @@ function syncCalFromConvs(){
           hora:horaAp, tipo:b.tipo, lugar:b.lugar||'',
           bdrId:b.id, status:'apertura', tipo_ev:'apertura',
           publicarAt:b.publicarAt,
+          color:getConvColor(b.id),
         });
       }
     });
@@ -3327,6 +3344,7 @@ function syncCalFromConvs(){
         lugar:c.lugar,
         convId:c.id,
         status:c.status,
+        color:getConvColor(c.id),
         inscritos:(c.players||[]).filter(p=>p.rol==='tit').length,
         MT:c.MT||(c.tipo==='sala'?12:14)
       });
@@ -6724,6 +6742,16 @@ function _countdownStr(date){
   const s = Math.floor((diff % 60000) / 1000);
   if(d > 0) return d+'d ' + String(h).padStart(2,'0') + 'h ' + String(m).padStart(2,'0') + 'm';
   return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+/* ===== COLORES DE CONVOCATORIA ===== */
+var CONV_PALETTE=['#4CAF50','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','#FF5722','#607D8B'];
+
+function getConvColor(id){
+  // Assign deterministic color based on id hash
+  var hash=0;
+  for(var i=0;i<id.length;i++) hash=(hash*31+id.charCodeAt(i))&0xFFFFFF;
+  return CONV_PALETTE[Math.abs(hash)%CONV_PALETTE.length];
 }
 
 /* ===== CSS ===== */
