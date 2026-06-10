@@ -6777,20 +6777,33 @@ function getConvColor(id){
 }
 
 function resetConvColors(){
-  // Call this before syncCalFromConvs to rebuild color map in creation order
   _convColorMap={};
   _convColorIdx=0;
-  // Sort all ids by timestamp extracted from id
+  // Only color active convocatorias and programmed borradores
+  // Each one gets a unique sequential color — no two share the same
   var allIds=[];
-  convocatorias.forEach(function(c){if(c.id)allIds.push({id:c.id,ts:parseInt(c.id.split('_').pop())||0});});
-  if(typeof borradores!=='undefined')borradores.forEach(function(b){if(b.id)allIds.push({id:b.id,ts:parseInt(b.id.split('_').pop())||0});});
-  historial.forEach(function(h){if(h.id)allIds.push({id:h.id,ts:parseInt(h.id.split('_').pop())||0});});
+  convocatorias.forEach(function(c){
+    if(c.id) allIds.push({id:c.id, ts:parseInt(c.id.split('_').pop())||0});
+  });
+  if(typeof borradores!=='undefined'){
+    borradores.filter(function(b){return b.status==='programado';}).forEach(function(b){
+      if(b.id) allIds.push({id:b.id, ts:parseInt(b.id.split('_').pop())||0});
+    });
+  }
+  // Sort by creation timestamp so earliest = color 0, next = color 1, etc.
   allIds.sort(function(a,b){return a.ts-b.ts;});
   allIds.forEach(function(item){
-    if(_convColorMap[item.id]===undefined){
-      _convColorMap[item.id]=CONV_PALETTE[_convColorIdx%CONV_PALETTE.length];
-      _convColorIdx++;
-    }
+    _convColorMap[item.id]=CONV_PALETTE[_convColorIdx%CONV_PALETTE.length];
+    _convColorIdx++;
+  });
+  // Played matches: try to link to their original conv by matching tipo+dia+hora
+  // If no match found, assign a neutral grey so they don't steal a slot color
+  historial.filter(function(h){return h.estado==='jugado';}).forEach(function(h){
+    if(!h.id||_convColorMap[h.id]!==undefined) return;
+    // Try to find original conv by convId stored in historial
+    var origColor=null;
+    if(h.convId) origColor=_convColorMap[h.convId];
+    _convColorMap[h.id]=origColor||'#78909C'; // slate grey if no match
   });
 }
 
