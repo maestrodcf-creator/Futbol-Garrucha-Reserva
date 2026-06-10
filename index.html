@@ -6238,7 +6238,7 @@ function _recogerDatosForm(){
     hora:    (document.getElementById('new-hora')||{}).value||'20:00',
     maps:    (document.getElementById('new-maps')||{}).value||'',
     coste:   (document.getElementById('new-coste')||{}).value||'',
-    tipo:    (document.getElementById('new-tipo')||{}).value||'sala',
+    tipo:    selTipoNew_local||'sala',
     MT:      parseInt((document.getElementById('new-mt')||{}).value||0)||0,
   };
 }
