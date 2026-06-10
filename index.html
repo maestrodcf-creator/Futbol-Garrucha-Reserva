@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v3.3 - 10/06/2026 14:48 -->
+<!-- Peña Garrucha v3.4 - 10/06/2026 19:06 -->
 
 
 <html lang="es">
@@ -691,22 +691,53 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
   <!-- UNLOCKED -->
   <div id="org-unlocked-view" style="display:none">
-
-    <!-- Sesión header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0 14px;border-bottom:1px solid var(--border);margin-bottom:20px">
-      <div style="display:flex;align-items:center;gap:9px">
-        <div style="width:32px;height:32px;border-radius:50%;background:rgba(34,136,61,.12);display:flex;align-items:center;justify-content:center">
-          <i class="ti ti-lock-open" style="font-size:16px;color:var(--grass)"></i>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:30px;height:30px;border-radius:50%;background:rgba(34,136,61,.12);display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-lock-open" style="font-size:14px;color:var(--grass)"></i>
         </div>
-        <div style="font-weight:700;font-size:14px">Sesión activa</div>
+        <span style="font-weight:700;font-size:14px">Panel Organizador</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v3.3</span>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="exportarCSV()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--grass);display:flex;align-items:center;gap:5px"><i class="ti ti-file-export" style="font-size:13px"></i> Exportar CSV</button>
-        <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-keypad" style="font-size:13px"></i> Cambiar PIN</button>
-        <div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;margin-bottom:6px">v3.3 - 10/06/2026 14:48 - 05/06/2026 16:26</div>
-    <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-lock" style="font-size:13px"></i> Bloquear</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="exportarCSV()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--grass);display:inline-flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:12px"></i> CSV</button>
+        <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif"><i class="ti ti-keypad" style="font-size:12px"></i> PIN</button>
+        <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:4px;font-family:'DM Sans',sans-serif"><i class="ti ti-lock" style="font-size:12px"></i> Cerrar</button>
       </div>
     </div>
+
+    <!-- Tab nav -->
+    <div style="display:flex;overflow-x:auto;border-bottom:2px solid var(--border);margin-top:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+      <button class="org-tab-btn" data-tab="conv-nueva" onclick="orgTab(this,'conv-nueva')" style="white-space:nowrap;padding:11px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--grass);border-bottom:2px solid var(--grass);margin-bottom:-2px;font-family:'DM Sans',sans-serif"><i class="ti ti-plus" style="font-size:13px"></i> Nueva conv.</button>
+      <button class="org-tab-btn" data-tab="borradores" onclick="orgTab(this,'borradores')" style="white-space:nowrap;padding:11px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif"><i class="ti ti-file-text" style="font-size:13px"></i> Borradores</button>
+      <button class="org-tab-btn" data-tab="activas" onclick="orgTab(this,'activas')" style="white-space:nowrap;padding:11px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif"><i class="ti ti-calendar" style="font-size:13px"></i> Activas</button>
+      <button class="org-tab-btn" data-tab="jugadores" onclick="orgTab(this,'jugadores')" style="white-space:nowrap;padding:11px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif"><i class="ti ti-users" style="font-size:13px"></i> Jugadores</button>
+      <button class="org-tab-btn" data-tab="partidos" onclick="orgTab(this,'partidos')" style="white-space:nowrap;padding:11px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:'DM Sans',sans-serif"><i class="ti ti-history" style="font-size:13px"></i> Partidos</button>
+    </div>
+
+    <!-- Tab panels -->
+    <div class="sec-pad" style="padding-top:16px">
+      <div id="org-tab-panel-conv-nueva" class="org-tab-panel">
+        <!-- New conv form rendered by renderOrgPanel → renderOrgNewConvForm -->
+        <div id="org-form-col"></div>
+        <div id="plantillas-section" style="margin-top:16px"></div>
+      </div>
+      <div id="org-tab-panel-borradores" class="org-tab-panel" style="display:none">
+        <div id="org-borradores-section"></div>
+      </div>
+      <div id="org-tab-panel-activas" class="org-tab-panel" style="display:none">
+        <div id="org-convs-list"></div>
+      </div>
+      <div id="org-tab-panel-jugadores" class="org-tab-panel" style="display:none">
+        <div id="org-jug-section"></div>
+        <div id="lista-negra-section"></div>
+      </div>
+      <div id="org-tab-panel-partidos" class="org-tab-panel" style="display:none">
+        <div id="org-historial-section"></div>
+      </div>
+    </div>
+  </div>
 
     <!-- LAYOUT: left + right -->
     <div id="org-grid" style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start">
@@ -1916,7 +1947,12 @@ function patchShowScreen(){
   const orig=showScreen;
   showScreen=function(id,btn){
     orig(id,btn);
-    if(id==='org'&&pinUnlocked)renderOrgPanel();
+    if(id==='org'&&pinUnlocked){
+      // Reset form so it renders fresh
+      var fc=document.getElementById('org-form-col');
+      if(fc)fc.innerHTML='';
+      renderOrgPanel();
+    }
     if(id==='campo'){mostrarListaEquipos();}
     if(id==='lista'){/* lista rendered by verListaConv */}
     if(id==='perfil'){/* perfil rendered by abrirPerfil */}
@@ -2466,190 +2502,85 @@ function adjScConv(cid,t,d){
 }
 
 function renderOrgPanel(){
-  const activas = convocatorias.filter(c=>c.status!=='cancelado');
-
-  // ═══════════════════════════════════════════════════════════════
-  // ZONA 1 — CREAR NUEVA CONVOCATORIA
-  // ═══════════════════════════════════════════════════════════════
-  // (already rendered by the static HTML form)
-
-  // ═══════════════════════════════════════════════════════════════
-  // ZONA 2 — CONVOCATORIAS ACTIVAS Y PASADAS
-  // ═══════════════════════════════════════════════════════════════
-  const zonaConvs = document.getElementById('org-convs-list');
-  if(zonaConvs){
-    if(!activas.length){
-      zonaConvs.innerHTML =
-        '<div class="empty-st" style="padding:20px 0"><i class="ti ti-calendar-off"></i>'+
-        '<p>No hay convocatorias activas</p></div>';
-    } else {
-      zonaConvs.innerHTML = activas.map(c=>{
-        const cid   = c.id;
-        const tit   = getConvTit(c);
-        const sup   = getConvSup(c);
-        const MT    = c.MT||(c.tipo==='sala'?12:14);
-        const abierta = c.status==='abierta';
-        const cerrada = c.status==='cerrada';
-
-        // Team summary
-        const eqA = (c.teamA&&c.teamA.length)?c.teamA:tit.slice(0,Math.ceil(tit.length/2)).map(p=>p.name);
-        const eqB = (c.teamB&&c.teamB.length)?c.teamB:tit.slice(Math.ceil(tit.length/2)).map(p=>p.name);
-
-        return (
-          // ── Card ──────────────────────────────────────────────────────
-          '<div class="card" style="margin-bottom:14px;overflow:hidden">'+
-
-            // Header
-            '<div style="background:var(--pitch);padding:12px 14px;display:flex;align-items:center;gap:12px">'+
-              '<div style="flex:1">'+
-                '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);letter-spacing:.04em">'+
-                  (c.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+
-                '</div>'+
-                '<div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:600;margin-top:1px">'+
-                  convFechaCompleta(c)+' · '+c.hora+(c.lugar?' · '+c.lugar:'')+
-                '</div>'+
-                (c.notas?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+c.notas+'</div>':'')+
-              '</div>'+
-              '<span class="pill '+(abierta?'pill-open':'pill-closed')+'">'+(abierta?'Abierta':'Cerrada')+'</span>'+
-            '</div>'+
-
-            '<div style="padding:12px 14px">'+
-
-              // ── Stats bar ───────────────────────────────────────────────
-              '<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">'+
-                '<span style="font-size:12px;color:var(--dark)"><i class="ti ti-users" style="color:var(--grass)"></i> <strong>'+tit.length+'/'+MT+'</strong> titulares</span>'+
-                (sup.length?'<span style="font-size:12px;color:var(--muted)"><i class="ti ti-user-plus"></i> '+sup.length+' suplente'+(sup.length>1?'s':'')+'</span>':'')+
-                (c.coste?'<span style="font-size:12px;color:var(--muted)"><i class="ti ti-coin"></i> '+c.coste+'€</span>':'')+
-                (timerHtml(c)?'':'')+
-              '</div>'+
-
-              // ── Timer ───────────────────────────────────────────────────
-              timerHtml(c)+
-              // Show auto-close time
-              (c.cierreAt&&c.status==='abierta'?
-                '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">'+
-                  '<i class="ti ti-clock" style="font-size:11px"></i> Inscripciones cierran: '+
-                  new Date(c.cierreAt).toLocaleString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+
-                '</div>':'')+
-
-              // ── Action buttons ──────────────────────────────────────────
-              '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgToggleStatus(this.dataset.cid)">'+
-                  '<i class="ti ti-'+(cerrada?'lock-open':'lock')+'"></i> '+(cerrada?'Reabrir':'Cerrar')+
-                '</button>'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)" style="color:var(--blue)">'+
-                  '<i class="ti ti-pencil"></i> Editar'+
-                '</button>'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgAnadirExterno(this.dataset.cid)" style="color:var(--grass)">'+
-                  '<i class="ti ti-user-plus"></i> Añadir jugador'+
-                '</button>'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)" style="color:#b8860b">'+
-                  '<i class="ti ti-layout-pitch"></i> Equipos'+
-                '</button>'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgAbrirAsistencia(this.dataset.cid)">'+
-                  '<i class="ti ti-clipboard-check"></i> Asistencia'+
-                '</button>'+
-                '<button class="org-action-btn" data-cid="'+cid+'" onclick="orgLimpiarConv(this.dataset.cid)" style="color:var(--muted)">'+
-                  '<i class="ti ti-eraser"></i> Limpiar'+
-                '</button>'+
-                '<button class="org-action-btn red" data-cid="'+cid+'" onclick="orgCancelarConv(this.dataset.cid)">'+
-                  '<i class="ti ti-x"></i> Cancelar'+
-                '</button>'+
-              '</div>'+
-
-              // ── REGISTRO PARTIDO (zona destacada si cerrada) ─────────────
-              (cerrada?
-                '<div style="background:rgba(34,136,61,.07);border:1.5px solid var(--grass);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:12px">'+
-                  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-                    '<div style="width:30px;height:30px;border-radius:var(--r-sm);background:var(--grass);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-                      '<i class="ti ti-ball-football" style="font-size:15px;color:#fff"></i>'+
-                    '</div>'+
-                    '<div>'+
-                      '<div style="font-weight:700;font-size:13px;color:var(--dark)">Registrar partido jugado</div>'+
-                      '<div style="font-size:11px;color:var(--muted)">Mete resultado, goles, asistencias y tarjetas</div>'+
-                    '</div>'+
-                  '</div>'+
-                  '<button class="btn-green" style="width:100%" data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)">'+
-                    '<i class="ti ti-clipboard-plus"></i> Abrir registro del partido'+
-                  '</button>'+
-                '</div>':
-                ''
-              )+
-
-              // ── Inscritos ───────────────────────────────────────────────
-              '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">'+
-                'Inscritos ('+tit.length+'/'+MT+')'+
-              '</div>'+
-              (tit.length?
-                '<div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px">'+
-                  tit.map((p,i)=>{
-                    const eq = (c.teamA||[]).includes(p.name)?'A':(c.teamB||[]).includes(p.name)?'B':'?';
-                    return '<div class="prow" style="padding:7px 12px">'+
-                      '<span style="width:18px;font-size:11px;color:var(--muted);font-weight:700;flex-shrink:0">'+(i+1)+'</span>'+
-                      (function(){var av=getAvatar(p.name);return av.type==='emoji'?'<div style="width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+av.val+'</div>':'<div style="width:28px;height:28px;border-radius:50%;background:'+(eq==='A'?'rgba(245,200,66,.2)':eq==='B'?'rgba(245,130,42,.2)':'var(--offwhite)')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--dark);flex-shrink:0">'+initials(p.name)+'</div>';})()+
-                      '</div>'+
-                      '<span style="flex:1;font-weight:600;font-size:13px;color:var(--dark)">'+p.name+'</span>'+
-                      (eq!=='?'?'<span style="font-size:10px;font-weight:700;color:'+(eq==='A'?'#b8860b':'#c04800')+';padding:2px 7px;border-radius:99px;background:'+(eq==='A'?'rgba(245,200,66,.15)':'rgba(245,130,42,.15)')+'">Eq.'+eq+'</span>':'')+
-                      // Pago
-                      '<button data-cid="'+cid+'" data-pn="'+p.name.replace(/"/g,'&quot;')+'" onclick="togglePago(this.dataset.cid,this.dataset.pn)" '+
-                        'style="margin-left:6px;border:1px solid '+((pagos[cid]||{})[p.name]?'var(--grass)':'var(--border2)')+
-                        ';background:'+((pagos[cid]||{})[p.name]?'rgba(34,136,61,.1)':'none')+
-                        ';border-radius:99px;cursor:pointer;padding:2px 8px;font-size:10px;font-weight:700;color:'+((pagos[cid]||{})[p.name]?'var(--grass)':'var(--muted)')+'">'+
-                        ((pagos[cid]||{})[p.name]?'✓ Pagado':'Pendiente')+
-                      '</button>'+
-                      '<button data-cid="'+cid+'" data-rol="tit" data-idx="'+i+'" onclick="orgEliminarInscrito(this.dataset.cid,this.dataset.rol,parseInt(this.dataset.idx))" '+
-                        'style="border:none;background:none;cursor:pointer;color:var(--red);padding:4px 6px;font-size:13px;margin-left:2px">'+
-                        '<i class="ti ti-x"></i>'+
-                      '</button>'+
-                    '</div>';
-                  }).join('')+
-                '</div>':
-                '<div style="font-size:12px;color:var(--muted);padding:8px 0 12px">Sin titulares apuntados</div>'
-              )+
-
-              // Suplentes
-              (sup.length?
-                '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">Suplentes</div>'+
-                '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'+
-                  sup.map((p,i)=>
-                    '<div style="display:flex;align-items:center;gap:5px;background:var(--offwhite);border-radius:99px;padding:3px 6px 3px 10px;font-size:11px">'+
-                      '<span style="font-weight:600;color:var(--dark)">'+p.name+'</span>'+
-                      '<button data-cid="'+cid+'" data-rol="sup" data-idx="'+i+'" onclick="orgEliminarInscrito(this.dataset.cid,this.dataset.rol,parseInt(this.dataset.idx))" '+
-                        'style="border:none;background:none;cursor:pointer;color:var(--muted);padding:2px;font-size:12px">'+
-                        '<i class="ti ti-x"></i>'+
-                      '</button>'+
-                    '</div>'
-                  ).join('')+
-                '</div>':''
-              )+
-
-              // Pagos resumen
-              (tit.length?
-                '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
-                  '<span style="font-size:11px;color:var(--muted)">'+getPagoResumen(cid,tit)+'</span>'+
-                  '<button onclick="marcarTodosPagado(\''+cid+'\')" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--grass);font-weight:600;font-family:\'DM Sans\',sans-serif">Marcar todos ✓</button>'+
-                '</div>':''
-              )+
-
-            '</div>'+ // /padding
-
-          '</div>' // /card
-        );
-      }).join('');
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // ZONA 3 — JUGADORES Y LISTA NEGRA (rendered separately)
-  // ═══════════════════════════════════════════════════════════════
-  renderOrgJug();
-  renderListaNegra();
+  // Always fill the new-conv form
+  renderOrgNewConvForm();
+  // Re-render whatever tab is active
+  if(_orgCurrentTab==='borradores') renderOrgBorradores();
+  if(_orgCurrentTab==='activas')    renderOrgConvsActivas();
+  if(_orgCurrentTab==='jugadores')  { renderOrgJug(); renderListaNegra(); }
+  if(_orgCurrentTab==='partidos')   renderOrgHistorial();
   renderPlantillas();
-  renderOrgHistorial();
-  renderOrgBorradores();
   syncCalFromConvs();
-  if(typeof renderCalendar==='function')renderCalendar();
+  if(typeof renderCalendar==='function') renderCalendar();
 }
+
+function renderOrgNewConvForm(){
+  // The form HTML is static in org-form-col — inject it if empty
+  var fc = document.getElementById('org-form-col');
+  if(!fc || fc.children.length > 0) return;
+  fc.innerHTML = _buildNewConvFormHTML();
+}
+
+function _buildNewConvFormHTML(){
+  return '<div class="sec-label" style="margin-bottom:10px"><i class="ti ti-plus"></i> Nueva convocatoria</div>'+
+    '<div class="card">'+
+      '<div class="card-section">'+
+        '<div class="fl" style="margin-top:0">Tipo de partido</div>'+
+        '<div style="display:flex;gap:8px" id="tipo-grp-new">'+
+          '<div class="tipo-card sel" onclick="selTipoNewLocal(this,\'sala\')"><i class="ti ti-ball-football" style="font-size:20px;display:block;margin-bottom:4px"></i>'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:.04em">Fútbol Sala — F5</div>'+
+            '<div style="font-size:10px;color:var(--muted)">6 por equipo · 12 total</div></div>'+
+          '<div class="tipo-card" onclick="selTipoNewLocal(this,\'f7\')"><i class="ti ti-ball-football" style="font-size:20px;display:block;margin-bottom:4px"></i>'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:.04em">Fútbol 7</div>'+
+            '<div style="font-size:10px;color:var(--muted)">7 jugadores por equipo</div></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card-section">'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+          '<div style="flex:1;min-width:110px"><div class="fl" style="margin-top:0">Día semana</div>'+
+            '<select class="fi" id="new-dia"><option>Lunes</option><option selected>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option></select></div>'+
+          '<div><div class="fl" style="margin-top:0">Día mes</div><input class="fi" type="number" id="new-diames" placeholder="15" min="1" max="31" style="width:76px"></div>'+
+          '<div><div class="fl" style="margin-top:0">Hora</div><input class="fi" type="time" id="new-hora" value="21:00" style="width:108px"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card-section">'+
+        '<div class="fl" style="margin-top:0">Campo *</div>'+
+        '<input class="fi" type="text" id="new-lugar" placeholder="Nombre del campo" list="dl-lugar" autocomplete="off">'+
+        '<datalist id="dl-lugar"></datalist>'+
+        '<div class="fl">Google Maps</div>'+
+        '<input class="fi" type="text" id="new-maps" placeholder="https://maps.google.com/..." list="dl-maps" autocomplete="off">'+
+        '<datalist id="dl-maps"></datalist>'+
+      '</div>'+
+      '<div class="card-section">'+
+        '<div style="display:flex;gap:8px;align-items:flex-end">'+
+          '<div><div class="fl" style="margin-top:0">Coste (€)</div><input class="fi" type="number" id="new-coste" placeholder="5" min="0" step="0.5" style="width:88px"></div>'+
+          '<div style="flex:1"><div class="fl" style="margin-top:0">A quién pagar</div><input class="fi" type="text" id="new-pagar" placeholder="Marcos · Bizum..." list="dl-pagar" autocomplete="off"><datalist id="dl-pagar"></datalist></div>'+
+        '</div>'+
+        '<div class="fl">Nota extra</div><input class="fi" type="text" id="new-notas" placeholder="Ej: Traer peto azul">'+
+      '</div>'+
+      '<div class="card-section">'+
+        '<div class="fl" style="margin-top:0">Cierre anticipado <span style="font-size:10px;color:var(--muted);font-weight:400">(opcional)</span></div>'+
+        '<div style="display:flex;gap:8px">'+
+          '<input class="fi" type="date" id="new-cierre-fecha" style="flex:1">'+
+          '<input class="fi" type="time" id="new-cierre-hora" value="20:00" style="width:108px">'+
+        '</div>'+
+        '<button class="btn-green" style="margin-top:12px;width:100%" onclick="crearNuevaConv()"><i class="ti ti-send"></i> Publicar ahora</button>'+
+        '<button class="btn-outline" style="margin-top:6px;width:100%" onclick="guardarBorrador()"><i class="ti ti-file-text"></i> Guardar borrador privado</button>'+
+        '<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">'+
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px"><i class="ti ti-alarm" style="font-size:11px"></i> Publicación automática</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">'+
+            '<div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Fecha publicar</label>'+
+              '<input id="pub-fecha" type="text" placeholder="08/06/2026" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 9px;font-size:12px;box-sizing:border-box"></div>'+
+            '<div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Hora publicar</label>'+
+              '<input id="pub-hora" type="time" value="18:00" style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 9px;font-size:12px;box-sizing:border-box"></div>'+
+          '</div>'+
+          '<button class="btn-outline" style="width:100%" onclick="programarPublicacion()"><i class="ti ti-clock-play"></i> Guardar y programar</button>'+
+        '</div>'+
+        '<button class="btn-outline" style="margin-top:8px" onclick="guardarPlantilla()"><i class="ti ti-bookmark"></i> Guardar como plantilla</button>'+
+      '</div>'+
+    '</div>';
+}
+
 
 function orgToggleStatus(cid){
   const c=convocatorias.find(x=>x.id===cid);if(!c)return;
@@ -6802,6 +6733,73 @@ function resetConvColors(){
     if(h.convId) origColor=_convColorMap[h.convId];
     _convColorMap[h.id]=origColor||'#78909C'; // slate grey if no match
   });
+}
+
+/* ===== ORG PANEL TABS ===== */
+var _orgCurrentTab = 'conv-nueva';
+
+function orgTab(btn, tab){
+  _orgCurrentTab = tab;
+  document.querySelectorAll('.org-tab-btn').forEach(function(b){
+    var isActive = b === btn;
+    b.style.color = isActive ? 'var(--grass)' : 'var(--muted)';
+    b.style.borderBottom = isActive ? '2px solid var(--grass)' : '2px solid transparent';
+  });
+  document.querySelectorAll('.org-tab-panel').forEach(function(p){
+    p.style.display = p.id === 'org-tab-panel-'+tab ? '' : 'none';
+  });
+  // Render content for the selected tab
+  if(tab==='borradores')  renderOrgBorradores();
+  if(tab==='activas')     renderOrgConvsActivas();
+  if(tab==='jugadores')   { renderOrgJug(); renderListaNegra(); }
+  if(tab==='partidos')    renderOrgHistorial();
+  if(tab==='conv-nueva')  { renderPlantillas(); }
+}
+
+function renderOrgConvsActivas(){
+  var el = document.getElementById('org-convs-list');
+  if(!el) return;
+  var activas = convocatorias.filter(function(c){ return c.status !== 'cancelado'; });
+  if(!activas.length){
+    el.innerHTML = '<div class="empty-st" style="padding:32px 0"><i class="ti ti-calendar-off"></i><p>No hay convocatorias activas</p></div>';
+    return;
+  }
+  el.innerHTML = activas.map(function(c){
+    var cid = c.id;
+    var tit = getConvTit(c);
+    var sup = getConvSup(c);
+    var MT  = c.MT||(c.tipo==='sala'?12:14);
+    var pct = Math.round(tit.length/MT*100);
+    var cerrada = c.status==='cerrada';
+    return '<div class="card" style="margin-bottom:14px;overflow:hidden">'+
+      '<div style="background:var(--pitch);padding:12px 14px">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;color:var(--lime);letter-spacing:.04em">'+(c.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7')+'</div>'+
+        '<div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:600;margin-top:1px">'+convFechaCompleta(c)+' · '+c.hora+(c.lugar?' · '+c.lugar:'')+'</div>'+
+        (c.notas?'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+c.notas+'</div>':'')+
+      '</div>'+
+      '<div style="height:3px;background:var(--border)"><div style="height:100%;background:'+(pct>=100?'var(--red)':'var(--grass)')+';width:'+Math.min(pct,100)+'%"></div></div>'+
+      '<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">'+
+        '<span style="font-size:12px;color:var(--muted)"><strong style="color:var(--dark)">'+tit.length+'/'+MT+'</strong> titulares · <strong style="color:var(--dark)">'+sup.length+'</strong> suplentes</span>'+
+        '<span class="pill '+(cerrada?'pill-closed':'pill-open')+'">'+(cerrada?'Cerrada':'Abierta')+'</span>'+
+      '</div>'+
+      timerHtml(c)+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--border)">'+
+        _oBtn('ti-lock'+(cerrada?'-open':''),'data-cid="'+cid+'" onclick="orgToggleStatus(this.dataset.cid)"',cerrada?'Reabrir':'Cerrar',cerrada?'var(--red)':'var(--muted)')+
+        _oBtn('ti-pencil','data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)"','Editar','var(--blue)')+
+        _oBtn('ti-user-plus','data-cid="'+cid+'" onclick="orgAnadirExterno(this.dataset.cid)"','Añadir','var(--grass)')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0">'+
+        _oBtn('ti-layout-pitch','data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)"','Equipos','#b8860b')+
+        _oBtn('ti-clipboard-check','data-cid="'+cid+'" onclick="orgAbrirAsistencia(this.dataset.cid)"','Asistencia','var(--muted)')+
+        _oBtn('ti-clipboard-plus','data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)"','Registrar','var(--grass)')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function _oBtn(icon, attrs, label, color){
+  return '<button '+attrs+' style="border:none;border-right:1px solid var(--border);background:none;cursor:pointer;padding:10px 4px;font-size:11px;font-weight:700;color:'+color+';font-family:\'DM Sans\',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">'+
+    '<i class="ti '+icon+'" style="font-size:16px"></i>'+label+'</button>';
 }
 
 /* ===== CSS ===== */
