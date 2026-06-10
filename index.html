@@ -370,6 +370,12 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 .cal-event-cerrada{background:rgba(192,57,43,.2)!important;color:#c0392b!important;font-weight:700}
 .has-event-cerrada{background:rgba(192,57,43,.05)!important;border-color:rgba(192,57,43,.3)!important}
 .has-event-cerrada .cal-day-num{color:#c0392b!important}
+.cal-event-programado{background:rgba(100,160,255,.25)!important;color:#2060c0!important;font-weight:700}
+.has-event-programado{background:rgba(100,160,255,.07)!important;border-color:rgba(100,160,255,.35)!important}
+.has-event-programado .cal-day-num{color:#2060c0!important}
+.cal-event-apertura{background:rgba(255,200,50,.25)!important;color:#a06800!important;font-weight:700}
+.has-event-apertura{background:rgba(255,200,50,.07)!important;border-color:rgba(255,200,50,.35)!important}
+.has-event-apertura .cal-day-num{color:#a06800!important}
 @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
     .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--bdr2);background:none;transition:all .2s}
 .pin-dot.filled{background:var(--grass);border-color:var(--grass)}
@@ -1467,8 +1473,10 @@ function renderCalendar(){
     const isPast=c.date&&c.date<todayStr&&!c.isToday;
     const hasJugado=hasEv&&c.events.some(e=>e.estado==='jugado');
     const todayCls=c.isToday?'today':'';
-    const hasCerrada=hasEv&&!hasJugado&&c.events.some(e=>e.status==='cerrada');
-    const evCls=hasJugado?'has-event-past':hasCerrada?'has-event-cerrada':hasEv?'has-event':'';
+    const hasCerrada=hasEv&&!hasJugado&&c.events.some(function(e){return e.status==='cerrada';});
+    const hasProgramado=hasEv&&!hasJugado&&!hasCerrada&&c.events.some(function(e){return e.status==='programado';});
+    const hasApertura=hasEv&&!hasJugado&&!hasCerrada&&!hasProgramado&&c.events.some(function(e){return e.status==='apertura';});
+    const evCls=hasJugado?'has-event-past':hasCerrada?'has-event-cerrada':hasProgramado?'has-event-programado':hasApertura?'has-event-apertura':hasEv?'has-event':'';
     const evHtml=hasEv?c.events.slice(0,1).map(e=>{
       const jugado=e.estado==='jugado';
       const sc=e.scoreA!==undefined?(e.scoreA+':'+e.scoreB):'';
@@ -1518,10 +1526,13 @@ function openCalEvent(dateStr){
     (evs.length+' evento'+(evs.length>1?'s':''));
   var rows=evs.map(function(ev,i){
     var isJ=ev.estado==='jugado';
+    var isProg=ev.status==='programado';
+    var isAper=ev.status==='apertura';
     var hIdx=isJ?historial.findIndex(function(h){return h.id===ev.histId;}):-1;
     var sc=ev.scoreA!==undefined?(ev.scoreA+':'+ev.scoreB):'';
     var rc=sc?(ev.scoreA>ev.scoreB?'var(--grass)':ev.scoreB>ev.scoreA?'#f5822a':'var(--muted)'):'';
-    return '<div class="cal-ev-detail-row" style="background:var(--offwhite);border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px;cursor:'+(isJ&&hIdx>=0?'pointer':'default')+'" data-hidx="'+hIdx+'">'+
+    var rowBg=isProg?'rgba(100,160,255,.05)':isAper?'rgba(255,200,50,.05)':'var(--offwhite)';
+    return '<div class="cal-ev-detail-row" style="background:'+rowBg+';border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px;cursor:'+(isJ&&hIdx>=0?'pointer':'default')+'" data-hidx="'+hIdx+'">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'+
         '<div style="font-weight:700;font-size:14px">'+ev.label+'</div>'+
         (sc?'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:'+rc+'">'+sc+'</div>':
@@ -3237,6 +3248,47 @@ function syncCalFromConvs(){
       });
     }
   });
+
+  // Sync borradores programados to calendar (partido day + apertura day)
+  if(typeof borradores !== 'undefined'){
+    borradores.filter(function(b){ return b.status==='programado'&&b.publicarAt&&b.dia; }).forEach(function(b){
+      // 1. Día del PARTIDO (same logic as convocatorias)
+      var diaIdx=DIAS_ES.indexOf(b.dia);
+      if(diaIdx>=0){
+        var base=new Date();
+        var offset=(diaIdx-base.getDay()+7)%7;
+        var d=new Date(base); d.setDate(d.getDate()+offset);
+        if(b.diames){var dm=parseInt(b.diames);if(!isNaN(dm)){
+          var now2=new Date();
+          var tryD=new Date(now2.getFullYear(),now2.getMonth(),dm);
+          if(tryD>=now2) d.setTime(tryD.getTime());
+          else d.setTime(new Date(now2.getFullYear(),now2.getMonth()+1,dm).getTime());
+        }}
+        var key1=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        if(!calEvents[key1])calEvents[key1]=[];
+        if(!calEvents[key1].find(function(ev){return ev.bdrId===b.id&&ev.tipo_ev==='partido';})){
+          calEvents[key1].push({
+            label:(b.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+' (programada)',
+            hora:b.hora, tipo:b.tipo, lugar:b.lugar||'',
+            bdrId:b.id, status:'programado', tipo_ev:'partido',
+          });
+        }
+      }
+      // 2. Día de APERTURA (publicarAt)
+      var pa=new Date(b.publicarAt);
+      var key2=pa.getFullYear()+'-'+String(pa.getMonth()+1).padStart(2,'0')+'-'+String(pa.getDate()).padStart(2,'0');
+      if(!calEvents[key2])calEvents[key2]=[];
+      if(!calEvents[key2].find(function(ev){return ev.bdrId===b.id&&ev.tipo_ev==='apertura';})){
+        var horaAp=pa.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+        calEvents[key2].push({
+          label:'Apertura: '+(b.tipo==='sala'?'Fútbol Sala':'Fútbol 7'),
+          hora:horaAp, tipo:b.tipo, lugar:b.lugar||'',
+          bdrId:b.id, status:'apertura', tipo_ev:'apertura',
+          publicarAt:b.publicarAt,
+        });
+      }
+    });
+  }
 
   // Rebuild calEvents from live convocatorias array
   // We only add entries for convocatorias that don't already have one
