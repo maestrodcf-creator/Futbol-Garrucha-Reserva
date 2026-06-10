@@ -852,7 +852,13 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 </div>
 
 
-    <div id="sc-avatar" class="screen">
+    <div id="sc-editar-conv" class="screen">
+    <div class="sec-pad" style="padding-top:16px">
+      <div id="editar-conv-content"></div>
+    </div>
+  </div>
+
+  <div id="sc-avatar" class="screen">
     <div class="sec-pad" style="padding-top:16px">
       <div id="avatar-editor-content"></div>
     </div>
@@ -1697,8 +1703,8 @@ function renderHistorial(){
 /* ═══════════════════════
    UI HELPERS
 ═══════════════════════ */
-const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Equipos',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada','avatar':'Mi Avatar'};
-const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Equipos por convocatoria',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control','avatar':'Personaliza tu perfil'};
+const pageTitles={inicio:'Inicio',conv:'Convocatoria',campo:'Equipos',nueva:'Nueva convocatoria',partidos:'Partidos',calendario:'Calendario',jugadores:'Jugadores',hist:'Historial',org:'Organizador',dashboard:'Temporada','avatar':'Mi Avatar','editar-conv':'Editar convocatoria'};
+const pageSubs={inicio:'Bienvenido a Peña Garrucha',conv:'Titulares, suplentes y tal vez',campo:'Equipos por convocatoria',nueva:'Configura el partido semanal',partidos:'Partidos de la semana',calendario:'Calendario de convocatorias',jugadores:'Registro de todos los jugadores',hist:'Partidos anteriores',dashboard:'Resumen de la temporada',org:'Panel de control','avatar':'Personaliza tu perfil','editar-conv':'Modifica los datos de la convocatoria'};
 
 function showScreen(id,btn){
   if(btn&&btn.disabled)return;
@@ -1888,6 +1894,7 @@ function patchShowScreen(){
     if(id==='perfil'){/* perfil rendered by abrirPerfil */}
     if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
     if(id==='avatar'){renderAvatarEditor();}
+    if(id==='editar-conv'){/* content already rendered by abrirEditarConvScreen */}
     if(id==='hist')renderHistorialEnhanced();
     if(id==='dashboard')renderDashboard();
     if(id==='inicio')renderInicioMulti();
@@ -4699,30 +4706,197 @@ function fallbackCompartir(canvas, texto){
 /* ===== EDITAR CONVOCATORIA ===== */
 function abrirEditarConv(cid){
   const c = convocatorias.find(x=>x.id===cid);
-  if(!c) return;
+  if(!c){ showToast('Convocatoria no encontrada'); return; }
+  _renderEditarConvScreen(c, false);
+  showScreen('editar-conv', null);
+}
 
-  document.getElementById('edit-conv-id').value = cid;
-  document.getElementById('edit-hora').value    = c.hora || '';
-  document.getElementById('edit-lugar').value   = c.lugar || '';
-  document.getElementById('edit-maps').value    = c.maps || '';
-  document.getElementById('edit-coste').value   = c.coste!==undefined ? c.coste : '';
-  document.getElementById('edit-pagar').value   = c.pagar || '';
-  document.getElementById('edit-notas').value   = c.notas || '';
+function abrirEditarBorrador(bdrId){
+  const b = borradores.find(x=>x.id===bdrId);
+  if(!b){ showToast('Borrador no encontrado'); return; }
+  _renderEditarConvScreen(b, true);
+  showScreen('editar-conv', null);
+}
 
-  // Format cierreAt for datetime-local input
-  const cierreEl = document.getElementById('edit-cierre');
-  if(c.cierreAt){
-    try{
-      const d = new Date(c.cierreAt);
-      // datetime-local needs "YYYY-MM-DDTHH:MM"
-      const pad = n => String(n).padStart(2,'0');
-      cierreEl.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
-    }catch(e){ cierreEl.value = ''; }
-  } else {
-    cierreEl.value = '';
+function _renderEditarConvScreen(c, esBorrador){
+  const el = document.getElementById('editar-conv-content');
+  if(!el) return;
+
+  const tipo = c.tipo==='sala'?'Fútbol Sala — F5':'Fútbol 7 — F7';
+  const pad = n => String(n).padStart(2,'0');
+
+  // Format publicarAt for programado borradores
+  let pubFecha='', pubHora='';
+  if(esBorrador && c.publicarAt){
+    const pd = new Date(c.publicarAt);
+    pubFecha = pad(pd.getDate())+'/'+pad(pd.getMonth()+1)+'/'+pd.getFullYear();
+    pubHora  = pad(pd.getHours())+':'+pad(pd.getMinutes());
   }
 
-  openModal('modal-editar-conv');
+  // Format cierreAt
+  let cierreVal='';
+  if(c.cierreAt){
+    try{
+      const d=new Date(c.cierreAt);
+      cierreVal=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+    }catch(e){}
+  }
+
+  el.innerHTML =
+    // Header badge
+    '<div style="display:flex;align-items:center;gap:10px;background:var(--pitch);border-radius:var(--r-md);padding:14px 16px;margin-bottom:18px">'+
+      '<div style="flex:1">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);letter-spacing:.04em">'+tipo+'</div>'+
+        '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px">'+
+          (esBorrador?'<span style="background:rgba(184,246,58,.1);color:var(--lime);padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">'+(c.status==='programado'?'\u23F0 PROGRAMADA':'\uD83D\uDCCB BORRADOR')+'</span>':
+           '<span style="background:rgba(34,136,61,.15);color:var(--grass);padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">\uD83D\uDFE2 ACTIVA</span>')+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+
+    '<input type="hidden" id="econv-id" value="'+c.id+'">'+
+    '<input type="hidden" id="econv-es-borrador" value="'+(esBorrador?'1':'0')+'">'+
+
+    // Tipo selector
+    '<div class="form-group" style="margin-bottom:14px">'+
+      '<label class="form-label">Tipo de partido</label>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button id="econv-btn-sala" onclick="econvSelTipo(\'sala\')" '+
+          'class="tipo-btn '+(c.tipo==='sala'?'active':'')+'" '+
+          'style="flex:1;padding:9px;border-radius:var(--r-sm);border:1.5px solid '+(c.tipo==='sala'?'var(--grass)':'var(--border)')+';background:'+(c.tipo==='sala'?'rgba(34,136,61,.1)':'none')+';font-weight:700;font-size:13px;cursor:pointer">'+
+          'F5 — Fútbol Sala</button>'+
+        '<button id="econv-btn-f7" onclick="econvSelTipo(\'f7\')" '+
+          'class="tipo-btn '+(c.tipo==='f7'?'active':'')+'" '+
+          'style="flex:1;padding:9px;border-radius:var(--r-sm);border:1.5px solid '+(c.tipo==='f7'?'var(--grass)':'var(--border)')+';background:'+(c.tipo==='f7'?'rgba(34,136,61,.1)':'none')+';font-weight:700;font-size:13px;cursor:pointer">'+
+          'F7 — Fútbol 7</button>'+
+      '</div>'+
+    '</div>'+
+
+    // Fields grid
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+      _econvField('econv-dia','Día semana','select',c.dia||'Lunes',
+        ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'])+
+      _econvField('econv-diames','Día del mes','number',c.diames||'',null,'1','31','Ej: 8')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+      _econvField('econv-hora','Hora partido','time',c.hora||'20:00')+
+      _econvField('econv-lugar','Lugar / Campo','text',c.lugar||'',null,null,null,'Pabellón...')+
+    '</div>'+
+    _econvField('econv-maps','Enlace Google Maps (opcional)','text',c.maps||'',null,null,null,'https://maps.google.com/...')+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;margin-top:14px">'+
+      _econvField('econv-coste','Coste (€)','number',c.coste!==undefined?c.coste:'',null,'0',null,'1')+
+      _econvField('econv-mt','Máx. titulares','number',c.MT||(c.tipo==='sala'?12:14),null,'6','22')+
+    '</div>'+
+
+    // Cierre automático (solo convs activas)
+    (!esBorrador?
+      '<div style="margin-bottom:14px">'+
+        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:6px">Cierre automático inscripciones</label>'+
+        '<input type="datetime-local" id="econv-cierre" value="'+cierreVal+'" '+
+          'style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;font-size:13px;box-sizing:border-box">'+
+      '</div>':'') +
+
+    // Publicación programada (solo borradores programados)
+    (esBorrador&&c.status==='programado'?
+      '<div style="background:rgba(184,246,58,.05);border:1px solid rgba(184,246,58,.2);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--lime);margin-bottom:8px">'+
+          '\u23F0 Fecha de publicación automática</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          _econvField('econv-pub-fecha','Fecha (DD/MM/YYYY)','text',pubFecha,null,null,null,'08/06/2026')+
+          _econvField('econv-pub-hora','Hora','time',pubHora)+
+        '</div>'+
+      '</div>':'') +
+
+    _econvField('econv-notas','Notas (opcional)','textarea',c.notas||'',null,null,null,'Info adicional...')+
+
+    // Action buttons
+    '<div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">'+
+      '<button class="btn-green" style="flex:2;min-width:140px" onclick="guardarCambiosConv()">'+
+        '<i class="ti ti-check"></i> Guardar cambios</button>'+
+      '<button class="btn-outline" style="flex:1;min-width:100px" '+
+        'onclick="showScreen(\'org\',document.querySelector(\'[data-screen=org]\'))">'+
+        'Cancelar</button>'+
+    '</div>'+
+    (esBorrador&&c.status==='programado'?
+      '<button class="btn-green" style="width:100%;margin-top:8px;background:rgba(34,136,61,.7)" data-bid="'+c.id+'" onclick="publicarBorradorAhora(this.dataset.bid);showScreen(\'org\',document.querySelector(\'[data-screen=org]\'))">'+
+        '<i class="ti ti-send"></i> Publicar ahora</button>':'');
+}
+
+function _econvField(id, label, type, value, options, min, max, placeholder){
+  const style = 'width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;font-size:13px;box-sizing:border-box;background:#fff';
+  const lbl = '<label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:block;margin-bottom:5px">'+label+'</label>';
+  if(type==='select'){
+    return '<div style="margin-bottom:0">'+lbl+'<select id="'+id+'" style="'+style+'">'+
+      options.map(o=>'<option value="'+o+'"'+(o===value?' selected':'')+'>'+o+'</option>').join('')+
+    '</select></div>';
+  }
+  if(type==='textarea'){
+    return '<div style="margin-bottom:0">'+lbl+'<textarea id="'+id+'" rows="2" placeholder="'+(placeholder||'')+'" style="'+style+';resize:vertical">'+value+'</textarea></div>';
+  }
+  return '<div style="margin-bottom:0">'+lbl+'<input type="'+type+'" id="'+id+'" value="'+value+'"'+
+    (min?' min="'+min+'"':'')+(max?' max="'+max+'"':'')+(placeholder?' placeholder="'+placeholder+'"':'')+
+    ' style="'+style+'"></div>';
+}
+
+let _econvTipo = 'sala';
+function econvSelTipo(tipo){
+  _econvTipo = tipo;
+  ['sala','f7'].forEach(t=>{
+    const btn = document.getElementById('econv-btn-'+t);
+    if(!btn) return;
+    const active = t===tipo;
+    btn.style.borderColor = active?'var(--grass)':'var(--border)';
+    btn.style.background  = active?'rgba(34,136,61,.1)':'none';
+  });
+}
+
+function guardarCambiosConv(){
+  const cid      = (document.getElementById('econv-id')||{}).value||'';
+  const esBorr   = (document.getElementById('econv-es-borrador')||{}).value==='1';
+  const arr      = esBorr ? borradores : convocatorias;
+  const c        = arr.find(x=>x.id===cid);
+  if(!c){ showToast('Error: convocatoria no encontrada'); return; }
+
+  const get = id => (document.getElementById(id)||{}).value||'';
+
+  c.tipo    = _econvTipo || c.tipo;
+  c.dia     = get('econv-dia')    || c.dia;
+  c.diames  = get('econv-diames');
+  c.hora    = get('econv-hora')   || c.hora;
+  c.lugar   = get('econv-lugar');
+  c.maps    = get('econv-maps');
+  c.coste   = get('econv-coste');
+  c.MT      = parseInt(get('econv-mt'))||( c.tipo==='sala'?12:14 );
+  c.notas   = get('econv-notas');
+
+  // Update cierreAt if changed (active convs)
+  if(!esBorr){
+    const cierreEl = document.getElementById('econv-cierre');
+    if(cierreEl&&cierreEl.value) c.cierreAt = new Date(cierreEl.value).toISOString();
+  }
+
+  // Update publicarAt if programado borrador
+  if(esBorr && c.status==='programado'){
+    const pf = get('econv-pub-fecha');
+    const ph = get('econv-pub-hora');
+    if(pf && ph){
+      const parts = pf.split('/');
+      if(parts.length===3){
+        const pd = new Date(parseInt(parts[2]),parseInt(parts[1])-1,parseInt(parts[0]),
+          parseInt(ph.split(':')[0]),parseInt(ph.split(':')[1]));
+        if(!isNaN(pd.getTime())){ c.publicarAt = pd.toISOString(); }
+      }
+    }
+  }
+
+  saveCloud();
+  syncCalFromConvs();
+  if(typeof renderCalendar==='function') renderCalendar();
+  renderOrgPanel();
+  renderInicioMulti();
+  renderProximasConvocatorias&&renderProximasConvocatorias();
+  showToast('✓ Convocatoria actualizada');
+  showScreen('org', document.querySelector('[data-screen=org]'));
 }
 
 function guardarEditarConv(){
@@ -6356,20 +6530,7 @@ function publicarBorradorAhora(bdrId){
 }
 
 function editarBorrador(bdrId){
-  const b = borradores.find(x=>x.id===bdrId);
-  if(!b)return;
-  // Fill form with borrador data
-  const set = (id,v)=>{ const el=document.getElementById(id); if(el)el.value=v; };
-  set('new-lugar',  b.lugar);
-  set('new-dia',    b.dia);
-  set('new-diames', b.diames);
-  set('new-hora',   b.hora);
-  set('new-maps',   b.maps||'');
-  set('new-coste',  b.coste||'');
-  // Scroll to form
-  const form = document.querySelector('.org-col-izq');
-  if(form) form.scrollIntoView({behavior:'smooth'});
-  showToast('Datos cargados en el formulario — edita y vuelve a guardar');
+  abrirEditarBorrador(bdrId);
 }
 
 function borrarBorrador(bdrId){
