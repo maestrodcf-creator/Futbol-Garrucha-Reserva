@@ -3233,6 +3233,8 @@ function patchConfirmarInsc(){
 
 
 function syncCalFromConvs(){
+  // Rebuild color map in creation order before any rendering
+  resetConvColors();
   // Reset historial entries before rebuilding (avoid stale data)
   Object.keys(calEvents).forEach(k=>{
     calEvents[k]=calEvents[k].filter(ev=>!ev.histId);
@@ -6745,13 +6747,51 @@ function _countdownStr(date){
 }
 
 /* ===== COLORES DE CONVOCATORIA ===== */
-var CONV_PALETTE=['#4CAF50','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','#FF5722','#607D8B'];
+// Distinct, well-separated palette — each conv gets the next color in sequence
+var CONV_PALETTE=[
+  '#E53935', // rojo vivo
+  '#1E88E5', // azul
+  '#43A047', // verde
+  '#FB8C00', // naranja
+  '#8E24AA', // morado
+  '#00ACC1', // cyan
+  '#F4511E', // naranja-rojo
+  '#3949AB', // azul índigo
+  '#00897B', // verde azulado
+  '#FFB300', // ámbar
+  '#D81B60', // rosa
+  '#6D4C41', // marrón
+];
+var _convColorMap={};
+var _convColorIdx=0;
 
 function getConvColor(id){
-  // Assign deterministic color based on id hash
-  var hash=0;
-  for(var i=0;i<id.length;i++) hash=(hash*31+id.charCodeAt(i))&0xFFFFFF;
-  return CONV_PALETTE[Math.abs(hash)%CONV_PALETTE.length];
+  if(!id) return CONV_PALETTE[0];
+  if(_convColorMap[id]!==undefined) return _convColorMap[id];
+  // Assign next color in sequence, but deterministically based on
+  // creation timestamp embedded in the id (cv_TIMESTAMP or bdr_TIMESTAMP)
+  // So the first created always gets color 0, second gets 1, etc.
+  _convColorMap[id]=CONV_PALETTE[_convColorIdx%CONV_PALETTE.length];
+  _convColorIdx++;
+  return _convColorMap[id];
+}
+
+function resetConvColors(){
+  // Call this before syncCalFromConvs to rebuild color map in creation order
+  _convColorMap={};
+  _convColorIdx=0;
+  // Sort all ids by timestamp extracted from id
+  var allIds=[];
+  convocatorias.forEach(function(c){if(c.id)allIds.push({id:c.id,ts:parseInt(c.id.split('_').pop())||0});});
+  if(typeof borradores!=='undefined')borradores.forEach(function(b){if(b.id)allIds.push({id:b.id,ts:parseInt(b.id.split('_').pop())||0});});
+  historial.forEach(function(h){if(h.id)allIds.push({id:h.id,ts:parseInt(h.id.split('_').pop())||0});});
+  allIds.sort(function(a,b){return a.ts-b.ts;});
+  allIds.forEach(function(item){
+    if(_convColorMap[item.id]===undefined){
+      _convColorMap[item.id]=CONV_PALETTE[_convColorIdx%CONV_PALETTE.length];
+      _convColorIdx++;
+    }
+  });
 }
 
 /* ===== CSS ===== */
