@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v3.2 - 10/06/2026 14:28 -->
+<!-- Peña Garrucha v3.2b - 10/06/2026 14:40 -->
 
 
 <html lang="es">
@@ -703,7 +703,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="exportarCSV()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--grass);display:flex;align-items:center;gap:5px"><i class="ti ti-file-export" style="font-size:13px"></i> Exportar CSV</button>
         <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-keypad" style="font-size:13px"></i> Cambiar PIN</button>
-        <div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;margin-bottom:6px">v3.2 - 10/06/2026 14:28 - 05/06/2026 16:26</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;margin-bottom:6px">v3.2b - 10/06/2026 14:40 - 05/06/2026 16:26</div>
     <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-lock" style="font-size:13px"></i> Bloquear</button>
       </div>
     </div>
@@ -7241,9 +7241,16 @@ window.addEventListener('load',function(){
 
 <script>
 if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.github.io'){
+  // Force clear all old caches and re-register
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+  });
+  caches.keys().then(function(keys){
+    keys.forEach(function(k){ caches.delete(k); });
+  });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
-      .then(function(reg){console.log('SW registered:',reg.scope);})
+      .then(function(reg){console.log('SW v3.2:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
