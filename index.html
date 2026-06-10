@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v3.2b - 10/06/2026 14:40 -->
+<!-- Peña Garrucha v3.2c - 10/06/2026 14:42 -->
 
 
 <html lang="es">
@@ -703,7 +703,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="exportarCSV()" style="border:1px solid var(--grass);background:rgba(34,136,61,.07);border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--grass);display:flex;align-items:center;gap:5px"><i class="ti ti-file-export" style="font-size:13px"></i> Exportar CSV</button>
         <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-keypad" style="font-size:13px"></i> Cambiar PIN</button>
-        <div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;margin-bottom:6px">v3.2b - 10/06/2026 14:40 - 05/06/2026 16:26</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.2);text-align:center;margin-bottom:6px">v3.2c - 10/06/2026 14:42 - 05/06/2026 16:26</div>
     <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 13px;font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px"><i class="ti ti-lock" style="font-size:13px"></i> Bloquear</button>
       </div>
     </div>
@@ -1482,7 +1482,10 @@ function renderCalendar(){
       const sc=e.scoreA!==undefined?(e.scoreA+':'+e.scoreB):'';
       return '<div class="cal-event-pip'+(jugado?' cal-event-past':'')+'">'+(sc?sc+' ':e.hora+' ')+e.label.split('—')[0].trim()+'</div>';
     }).join(''):'';
-    var evColor=hasEv&&c.events[0].color?c.events[0].color:'';
+    // Re-read color live from calEvents to avoid stale data
+    var liveEvs=c.date?calEvents[c.date]:null;
+    var liveColor=liveEvs&&liveEvs[0]&&liveEvs[0].color?liveEvs[0].color:'';
+    var evColor=liveColor;
     var evBg=evColor?'background:'+evColor+'18;border:1px solid '+evColor+'44;':'';
     var evNumColor=evColor?'color:'+evColor+';':'';
     return '<div class="cal-day in-month '+todayCls+' '+evCls+'" '+
@@ -3235,6 +3238,14 @@ function patchConfirmarInsc(){
 function syncCalFromConvs(){
   // Rebuild color map in creation order before any rendering
   resetConvColors();
+  // Update colors on any already-stored calEvents
+  Object.keys(calEvents).forEach(function(k){
+    calEvents[k].forEach(function(ev){
+      if(ev.convId) ev.color=getConvColor(ev.convId);
+      else if(ev.bdrId) ev.color=getConvColor(ev.bdrId);
+      else if(ev.histId) ev.color=getConvColor(ev.histId);
+    });
+  });
   // Reset historial entries before rebuilding (avoid stale data)
   Object.keys(calEvents).forEach(k=>{
     calEvents[k]=calEvents[k].filter(ev=>!ev.histId);
