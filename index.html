@@ -6766,14 +6766,10 @@ var _convColorMap={};
 var _convColorIdx=0;
 
 function getConvColor(id){
-  if(!id) return CONV_PALETTE[0];
-  if(_convColorMap[id]!==undefined) return _convColorMap[id];
-  // Assign next color in sequence, but deterministically based on
-  // creation timestamp embedded in the id (cv_TIMESTAMP or bdr_TIMESTAMP)
-  // So the first created always gets color 0, second gets 1, etc.
-  _convColorMap[id]=CONV_PALETTE[_convColorIdx%CONV_PALETTE.length];
-  _convColorIdx++;
-  return _convColorMap[id];
+  if(!id) return '#78909C';
+  // Only return pre-assigned colors — NO fallback assignment
+  // resetConvColors() must be called first to populate the map
+  return _convColorMap[id]||'#78909C';
 }
 
 function resetConvColors(){
