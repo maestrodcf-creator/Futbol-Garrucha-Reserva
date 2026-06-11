@@ -4918,6 +4918,14 @@ function abrirEditarPartido(idx){
             ).join('')+
           '</div>'+
         '</div>'+
+        '<div style="padding:8px 14px 12px">'+
+          '<a class="prox-wa-btn" data-bid="'+b.id+'" href="#" '+
+            'style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px;'+
+            'background:#25D366;color:#fff;font-size:12px;font-weight:700;text-decoration:none;'+
+            'border-radius:var(--r-sm)">'+
+            '<i class="ti ti-bell" style="font-size:14px"></i>'+
+            ' Avisar por WhatsApp</a>'+
+        '</div>'+
       '</div>';
     }).join('');
   }
@@ -6584,6 +6592,26 @@ function renderProximasConvocatorias(){
         '</div>'+
       '</div>';
     }).join('');
+
+  // Wire WA share buttons
+  setTimeout(function(){
+    document.querySelectorAll('.prox-wa-btn').forEach(function(a){
+      var bid=a.getAttribute('data-bid');
+      a.addEventListener('click',function(e){
+        e.preventDefault();
+        var b2=borradores.find(function(x){return x.id===bid;});
+        if(!b2)return;
+        var tipo=b2.tipo==='sala'?'Futbol Sala':'Futbol 7';
+        var partido=b2.dia+(b2.diames?' '+b2.diames:'')+' a las '+b2.hora;
+        var pubDate=new Date(b2.publicarAt);
+        var fechaPub=pubDate.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+        var horaPub=pubDate.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+        var countdown=_countdownStr(pubDate);
+        var msg='\uD83D\uDD14 CONVOCATORIA PROXIMA\n\n'+               '\u26BD '+tipo+' \u2014 '+partido+'\n'+               (b2.lugar?'\uD83D\uDCCD '+b2.lugar+'\n':'')+               '\n\uD83D\uDD13 Inscripciones abren el '+fechaPub+' a las '+horaPub+'\n'+               '\u23F0 Quedan: '+countdown+'\n'+               '\n\uD83D\uDD17 '+location.href.split('?')[0];
+        window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+      });
+    });
+  },100);
 
   // Start countdown timer
   if(_proximasTimer) clearInterval(_proximasTimer);
