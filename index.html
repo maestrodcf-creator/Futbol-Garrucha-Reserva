@@ -543,27 +543,14 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <div id="sc-inicio" class="screen active">
       <div class="sec-pad" style="padding-top:20px">
 
-        <!-- Conv activa o vacío -->
+        <!-- 1. Convocatorias activas (o mensaje vacío) -->
         <div id="conv-list"></div>
 
-        <!-- PRÓXIMAS CONVOCATORIAS (programadas) -->
-        <div id="proximas-section" style="margin-top:16px"></div>
+        <!-- 2. Botón: Próximas convocatorias -->
+        <div id="proximas-section"></div>
 
-        <!-- PARTIDOS DE LA TEMPORADA -->
-        <div id="partidos-temporada-section" style="margin-top:24px"></div>
-        <div id="inicio-conv-block">
-          <div class="empty-st" style="padding:40px 16px">
-            <i class="ti ti-whistle"></i>
-            <span class="emph">No hay convocatoria activa</span>
-            <p>Crea la convocatoria semanal desde "Nueva conv." para que todos puedan apuntarse.</p>
-          </div>
-        </div>
-
-        <!-- Partidos de la semana en inicio -->
-        <div id="inicio-partidos-section" style="display:none;margin-top:8px">
-          <div class="stitle" style="padding:0 0 0 0">Partidos configurados</div>
-          <div id="inicio-partidos-list"></div>
-        </div>
+        <!-- 3. Botón: Partidos de la temporada -->
+        <div id="btn-temporada-inicio"></div>
 
       </div>
     </div>
@@ -2010,12 +1997,6 @@ function _renderInicioButtons(){
   }
   // 2. Temporada button
   var tempWrap=document.getElementById('btn-temporada-inicio');
-  if(!tempWrap){
-    tempWrap=document.createElement('div');
-    tempWrap.id='btn-temporada-inicio';
-    var convList=document.getElementById('conv-list');
-    if(convList&&convList.parentNode) convList.parentNode.appendChild(tempWrap);
-  }
   if(tempWrap){
     var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
     tempWrap.innerHTML=
@@ -5161,7 +5142,7 @@ function confirmarRegistroManual(){
 
 /* ===== PARTIDOS DE LA TEMPORADA (zona pública en inicio) ===== */
 function renderPartidosTemporada(){
-  const el = document.getElementById('partidos-temporada-section');
+  const el = document.getElementById('sc-temporada-content')||document.createElement('div');
   if(!el) return;
 
   const jugados = historial.filter(h=>h.estado==='jugado').slice().reverse();
