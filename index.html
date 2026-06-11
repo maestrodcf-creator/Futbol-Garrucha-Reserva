@@ -6912,23 +6912,48 @@ function renderTemporadaResumen(el){
     el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay partidos registrados a\u00FAn</div>';
     return;
   }
-  el.innerHTML=
-    '<div class="card" style="margin-bottom:8px">'+
-      jugados.slice().reverse().map(function(h){
-        var ganA=h.scoreA>h.scoreB,ganB=h.scoreB>h.scoreA;
-        var res=ganA?'\u{1F7E2}':ganB?'\u{1F534}':'\u{1F7E1}';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">'+
-          '<div style="font-size:12px;color:var(--muted)">'+h.fecha+'</div>'+
-          '<div style="font-size:12px;font-weight:600;color:var(--dark)">'+(h.tipo==='sala'?'Sala':'F7')+'</div>'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--dark)">'+h.scoreA+' : '+h.scoreB+'</div>'+
-          '<div style="font-size:16px">'+res+'</div>'+
-        '</div>';
-      }).join('')+
-    '</div>'+
+  var MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var rows = jugados.slice().reverse().map(function(h){
+    var ganA=h.scoreA>h.scoreB, ganB=h.scoreB>h.scoreA;
+    var scoreColor=ganA?'#43A047':ganB?'#E53935':'#FB8C00';
+    var parts=h.fecha?h.fecha.split('/'):['-','-','-'];
+    var dia=parts[0]||'-';
+    var mes=MESES[(parseInt(parts[1])||1)-1]||'';
+    var ganLabel=ganA?'Victoria Eq.A':ganB?'Victoria Eq.B':'Empate';
+    var nJug=(h.teamA||[]).length+(h.teamB||[]).length;
+    var row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer';
+    row.setAttribute('data-hid', h.id);
+    row.onclick = function(){ abrirDetallePartido(this.getAttribute('data-hid')); };
+    row.innerHTML =
+      '<div style="background:var(--pitch);border-radius:6px;padding:4px 7px;text-align:center;flex-shrink:0;min-width:36px">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);line-height:1">'+dia+'</div>'+
+        '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase">'+mes+'</div>'+
+      '</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+
+          (h.tipo==='sala'?'F\u00FAtbol Sala \u2014 F5':'F\u00FAtbol 7 \u2014 F7')+(h.lugar?' \u00B7 '+h.lugar:'')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+ganLabel+(nJug?' \u00B7 '+nJug+' jugadores':'')+' \u203A Ver detalle</div>'+
+      '</div>'+
+      '<div style="text-align:right;flex-shrink:0">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:'+scoreColor+';line-height:1">'+h.scoreA+':'+h.scoreB+'</div>'+
+      '</div>';
+    return row.outerHTML;
+  }).join('');
+
+  var verMasBtn =
     '<button onclick="showScreen(\'temporada\',document.querySelector(\'[data-screen=temporada]\'))" '+
-      'style="width:100%;border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);'+
-      'padding:10px;font-size:12px;font-weight:700;color:var(--grass);cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
-      'Ver estad\u00EDsticas completas \u2192</button>';
+    'style="width:100%;border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);'+
+    'padding:10px;font-size:12px;font-weight:700;color:var(--grass);cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+    'Ver estad\u00EDsticas completas \u2192</button>';
+
+  el.innerHTML = '<div class="card" style="margin-bottom:8px;overflow:hidden">'+rows+'</div>'+verMasBtn;
+
+  // Wire up clicks after innerHTML
+  el.querySelectorAll('[data-hid]').forEach(function(row){
+    row.onclick = function(){ abrirDetallePartido(this.getAttribute('data-hid')); };
+  });
 }
 
 
@@ -6968,8 +6993,6 @@ window.addEventListener('load',function(){
   loadCloud().then(function(){
     syncCalFromConvs();
     renderInicioMulti();
-    renderProximasConvocatorias();
-    renderPartidosTemporada();
     renderJugadoresEnhanced();
     renderHistorialEnhanced();
     if(typeof renderCalendar==='function')renderCalendar();
