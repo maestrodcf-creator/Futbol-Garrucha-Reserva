@@ -6694,10 +6694,11 @@ function renderOrgConvsActivas(){
         _oBtn('ti-pencil','data-cid="'+cid+'" onclick="abrirEditarConv(this.dataset.cid)"','Editar','var(--blue)')+
         _oBtn('ti-user-plus','data-cid="'+cid+'" onclick="orgAnadirExterno(this.dataset.cid)"','Añadir','var(--grass)')+
       '</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0">'+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0">'+
         _oBtn('ti-layout-pitch','data-cid="'+cid+'" onclick="abrirCampoEquipos(this.dataset.cid)"','Equipos','#b8860b')+
         _oBtn('ti-clipboard-check','data-cid="'+cid+'" onclick="orgAbrirAsistencia(this.dataset.cid)"','Asistencia','var(--muted)')+
         _oBtn('ti-clipboard-plus','data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)"','Registrar','var(--grass)')+
+        _oBtn('ti-user-minus','data-cid="'+cid+'" onclick="orgEliminarJugador(this.dataset.cid)"','Eliminar','var(--red)')+
       '</div>'+
     '</div>';
   }).join('');
@@ -6707,6 +6708,105 @@ function _oBtn(icon, attrs, label, color){
   return '<button '+attrs+' style="border:none;border-right:1px solid var(--border);background:none;cursor:pointer;padding:10px 4px;font-size:11px;font-weight:700;color:'+color+';font-family:\'DM Sans\',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">'+
     '<i class="ti '+icon+'" style="font-size:16px"></i>'+label+'</button>';
 }
+
+/* ===== ELIMINAR JUGADOR DE CONVOCATORIA (ORGANIZADOR) ===== */
+function orgEliminarJugador(cid){
+  var c = convocatorias.find(function(x){return x.id===cid;});
+  if(!c){showToast('Convocatoria no encontrada');return;}
+  var players = c.players||[];
+  if(!players.length){showToast('No hay jugadores en esta convocatoria');return;}
+
+  var modal = document.getElementById('modal-eliminar-jugador');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modal-eliminar-jugador';
+    modal.className = 'modal-bg';
+    document.body.appendChild(modal);
+  }
+
+  var tipo = c.tipo==='sala'?'Fútbol Sala':'Fútbol 7';
+  var tits = players.filter(function(p){return p.rol==='tit';});
+  var sups = players.filter(function(p){return p.rol==='sup';});
+  var tvs  = players.filter(function(p){return p.rol==='tv';});
+
+  function buildRows(list, label, color){
+    if(!list.length) return '';
+    var rows = list.map(function(p){
+      var rolLabel = p.rol==='tit'?'Titular':p.rol==='sup'?'Suplente':'Tal vez';
+      var av = renderAvatarCircle(p.name,34,11);
+      var btn = document.createElement('button');
+      btn.setAttribute('data-cid', cid);
+      btn.setAttribute('data-name', p.name);
+      btn.onclick = function(){confirmarEliminarJugador(this.getAttribute('data-cid'),this.getAttribute('data-name'));};
+      btn.style.cssText = 'border:1px solid rgba(192,57,43,.3);background:rgba(192,57,43,.08);border-radius:8px;cursor:pointer;padding:5px 10px;font-size:11px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:4px;font-family:DM Sans,sans-serif;white-space:nowrap';
+      btn.innerHTML = '<i class="ti ti-user-minus" style="font-size:12px"></i> Quitar';
+
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border)';
+      var left = document.createElement('div');
+      left.style.cssText = 'display:flex;align-items:center;gap:10px';
+      left.innerHTML = av + '<div><div style="font-size:13px;font-weight:600">'+p.name+'</div><div style="font-size:10px;color:'+color+'">'+rolLabel+' · '+(p.pos||'')+'</div></div>';
+      row.appendChild(left);
+      row.appendChild(btn);
+      return row.outerHTML;
+    }).join('');
+    return '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:'+color+';padding:8px 14px 4px">'+label+' ('+list.length+')</div>'+rows;
+  }
+
+  modal.innerHTML =
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<h2 style="margin-bottom:4px">Eliminar jugador</h2>'+
+    '<p class="msub">'+tipo+' · '+convFechaCompleta(c)+'</p>'+
+    buildRows(tits,'Titulares','var(--grass)')+
+    buildRows(sups,'Suplentes','#FB8C00')+
+    buildRows(tvs,'Tal vez','var(--muted)')+
+    '<div style="padding:14px"><button class="btn-outline" style="width:100%" id="btn-cerrar-elim">Cerrar</button></div>'+
+    '</div>';
+
+  openModal('modal-eliminar-jugador');
+  setTimeout(function(){
+    var btn=document.getElementById('btn-cerrar-elim');
+    if(btn) btn.onclick=function(){closeModal('modal-eliminar-jugador');};
+    // Re-wire the quitar buttons (innerHTML loses event listeners)
+    document.querySelectorAll('[data-cid="'+cid+'"][data-name]').forEach(function(b){
+      if(b.id==='btn-cerrar-elim') return;
+      b.onclick=function(){confirmarEliminarJugador(this.getAttribute('data-cid'),this.getAttribute('data-name'));};
+    });
+  },50);
+}
+
+function confirmarEliminarJugador(cid, nombre){
+  var c = convocatorias.find(function(x){return x.id===cid;});
+  if(!c) return;
+  var wasTit = (c.players||[]).some(function(p){return p.name===nombre&&p.rol==='tit';});
+  var MT = c.MT||(c.tipo==='sala'?12:14);
+  var listaLlena = getConvTit(c).length >= MT;
+
+  c.players = (c.players||[]).filter(function(p){return p.name!==nombre;});
+
+  var promovido = null;
+  if(wasTit && listaLlena){
+    var sups2 = getConvSup(c);
+    if(sups2.length){
+      var idx = c.players.findIndex(function(p){return p.name===sups2[0].name&&p.rol==='sup';});
+      if(idx>=0){
+        c.players[idx].rol='tit';
+        c.players[idx].promotedAt=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+        promovido=c.players[idx].name;
+      }
+    }
+  }
+
+  saveCloud();
+  closeModal('modal-eliminar-jugador');
+  renderOrgConvsActivas();
+  renderInicioMulti();
+  var msg = '✓ '+nombre+' eliminado.';
+  if(promovido) msg += ' '+promovido+' pasa a titular.';
+  showToast(msg);
+}
+
 
 /* ===== CSS ===== */
 (function(){
