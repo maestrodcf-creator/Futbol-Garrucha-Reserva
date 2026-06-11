@@ -5204,8 +5204,11 @@ function renderPartidosTemporada(){
     }).join('');
 }
 
-function abrirDetallePartido(idx){
-  const h = historial[idx];
+function abrirDetallePartido(idOrIdx){
+  // Accept either historial id (string) or numeric index
+  var h = typeof idOrIdx==='string'
+    ? historial.find(function(x){return x.id===idOrIdx;})
+    : historial[idOrIdx];
   if(!h) return;
 
   // Build detail modal content
