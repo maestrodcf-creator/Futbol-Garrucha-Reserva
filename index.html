@@ -7033,65 +7033,118 @@ function renderCartera(){
   var partidos = cartera.partidos||[];
   var boteTotal = cartera.bote||0;
 
-  // Summary card
-  var resumen = '<div class="card" style="margin-bottom:14px;overflow:hidden">'+
-    '<div style="background:var(--pitch);padding:14px 16px">'+
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:rgba(184,246,58,.6);letter-spacing:.06em;margin-bottom:8px">RESUMEN DE LA TEMPORADA</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-        '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;text-align:center">'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:var(--lime);line-height:1">'+boteTotal.toFixed(2)+'€</div>'+
-          '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Bote acumulado</div>'+
-        '</div>'+
-        '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;text-align:center">'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:var(--lime);line-height:1">'+partidos.length+'</div>'+
-          '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Partidos registrados</div>'+
+  // ── RESUMEN ────────────────────────────────────────────────────────────
+  var totalRecaudadoGlobal = partidos.reduce(function(s,p){return s+(p.totalRecaudado||0);},0);
+  var totalCosteGlobal     = partidos.reduce(function(s,p){return s+(p.costeTipo||0);},0);
+  var nPartidos            = partidos.length;
+
+  var resumen =
+    '<div class="card" style="margin-bottom:16px;overflow:hidden">'+
+      '<div style="background:var(--pitch);padding:14px 16px">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;color:rgba(184,246,58,.6);letter-spacing:.06em;margin-bottom:12px">RESUMEN TEMPORADA</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+          '<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px;text-align:center">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--lime);line-height:1">'+boteTotal.toFixed(2)+'\u20AC</div>'+
+            '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Bote acumulado</div>'+
+          '</div>'+
+          '<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px;text-align:center">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--lime);line-height:1">'+totalRecaudadoGlobal.toFixed(0)+'\u20AC</div>'+
+            '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Total recaudado</div>'+
+          '</div>'+
+          '<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px;text-align:center">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--lime);line-height:1">'+nPartidos+'</div>'+
+            '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Partidos</div>'+
+          '</div>'+
         '</div>'+
       '</div>'+
-    '</div>'+
-  '</div>';
+    '</div>';
 
-  // Per-match breakdown
-  var desglose = partidos.length ? '<div class="sec-label" style="margin-bottom:8px">Desglose por partido</div>'+
-    '<div class="card" style="overflow:hidden">'+
-    partidos.slice().reverse().map(function(p){
-      var tipoLabel = p.tipo==='sala'?'F5':'F7';
+  // ── TABLA DE PARTIDOS ──────────────────────────────────────────────────
+  if(!partidos.length){
+    el.innerHTML = resumen + '<div class="empty-st" style="padding:32px 0"><i class="ti ti-coin-euro"></i><p>Sin partidos registrados a\u00FAn</p></div>';
+    return;
+  }
+
+  // Sort by date
+  var sorted = partidos.slice().sort(function(a,b){
+    var pa=a.fecha?a.fecha.split('/').reverse().join(''):'';
+    var pb=b.fecha?b.fecha.split('/').reverse().join(''):'';
+    return pb.localeCompare(pa);
+  });
+
+  var tabla =
+    '<div class="sec-label" style="margin-bottom:8px"><i class="ti ti-wallet" style="font-size:13px"></i> Desglose por partido</div>'+
+    '<div class="card" style="overflow:hidden;margin-bottom:14px">'+
+    sorted.map(function(p){
+      var tipoLabel = p.tipo==='sala'?'F5 \u2014 F\u00FAtbol Sala':'F7 \u2014 F\u00FAtbol 7';
+      var tipoShort = p.tipo==='sala'?'F5':'F7';
       var boteColor = p.botePartido>0?'var(--grass)':p.botePartido<0?'var(--red)':'var(--muted)';
-      return '<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-          '<span style="font-size:12px;font-weight:700;color:var(--dark)">'+p.fecha+' · '+tipoLabel+'</span>'+
-          '<span style="font-size:11px;color:var(--muted)">'+p.nJugadores+' jugadores</span>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">'+
-          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
-            '<div style="font-weight:700;color:var(--dark)">−'+p.costeTipo+'€</div>'+
-            '<div style="color:var(--muted)">Coste campo</div>'+
+      var isPrevio  = p.previo===true;
+      var nJug      = p.nJugadores!=='?'?p.nJugadores+'&nbsp;jug.':'—';
+      var recaud    = typeof p.totalRecaudado==='number'?p.totalRecaudado.toFixed(1)+'\u20AC':'—';
+      var boteStr   = typeof p.botePartido==='number'?(p.botePartido>=0?'+':'')+p.botePartido.toFixed(1)+'\u20AC':'—';
+
+      // Find matching historial entry for click
+      var hEntry = !isPrevio ? historial.find(function(h){return h.id===p.hid;}) : null;
+
+      var row =
+        '<div style="padding:12px 14px;border-bottom:1px solid var(--border);'+(hEntry?'cursor:pointer;':'')+'" '+
+          (hEntry?'data-hid="'+p.hid+'"':'')+'>'+
+
+          // Top row: fecha + tipo + badge previo
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+            '<div style="display:flex;align-items:center;gap:8px">'+
+              '<span style="font-size:13px;font-weight:700;color:var(--dark)">'+p.fecha+'</span>'+
+              '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:rgba(34,136,61,.1);color:var(--grass)">'+tipoShort+'</span>'+
+              (isPrevio?'<span style="font-size:10px;color:var(--muted);font-style:italic">Antes de la app</span>':'<span style="font-size:10px;color:var(--muted)">'+tipoLabel+'</span>')+
+            '</div>'+
+            (hEntry?'<span style="font-size:11px;color:var(--grass);display:flex;align-items:center;gap:3px"><i class="ti ti-chevron-right" style="font-size:12px"></i> Ver registro</span>':'')+
           '</div>'+
-          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
-            '<div style="font-weight:700;color:var(--dark)">+'+p.totalRecaudado.toFixed(1)+'€</div>'+
-            '<div style="color:var(--muted)">Recaudado</div>'+
+
+          // Stats grid
+          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">'+
+            '<div style="background:var(--offwhite);border-radius:6px;padding:6px 8px;text-align:center">'+
+              '<div style="font-size:13px;font-weight:700;color:var(--dark)">'+nJug+'</div>'+
+              '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">Asistentes</div>'+
+            '</div>'+
+            '<div style="background:var(--offwhite);border-radius:6px;padding:6px 8px;text-align:center">'+
+              '<div style="font-size:13px;font-weight:700;color:var(--dark)">\u2212'+p.costeTipo+'\u20AC</div>'+
+              '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">Coste campo</div>'+
+            '</div>'+
+            '<div style="background:var(--offwhite);border-radius:6px;padding:6px 8px;text-align:center">'+
+              '<div style="font-size:13px;font-weight:700;color:var(--dark)">'+recaud+'</div>'+
+              '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">Recaudado</div>'+
+            '</div>'+
+            '<div style="background:var(--offwhite);border-radius:6px;padding:6px 8px;text-align:center">'+
+              '<div style="font-size:13px;font-weight:700;color:'+boteColor+'">'+boteStr+'</div>'+
+              '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">Al bote</div>'+
+            '</div>'+
           '</div>'+
-          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
-            '<div style="font-weight:700;color:'+boteColor+'">'+(p.botePartido>=0?'+':'')+p.botePartido.toFixed(1)+'€</div>'+
-            '<div style="color:var(--muted)">Al bote</div>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
+
+        '</div>';
+      return row;
     }).join('')+
-    '</div>' : '<div class="empty-st" style="padding:32px 0"><i class="ti ti-coin-euro"></i><p>Sin partidos registrados aún</p></div>';
+    '</div>';
 
-  // Cuotas explainer
-  var cuotas = '<div class="card" style="margin-top:14px;padding:12px 14px">'+
-    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">'+
-      '<i class="ti ti-info-circle" style="font-size:12px"></i> Cálculo de cuotas</div>'+
-    '<div style="font-size:12px;color:var(--muted);line-height:1.6">'+
-      '⚽ <strong>Fútbol Sala (F5):</strong> Campo 10€ ÷ jugadores = 1€/jugador<br>'+
-      'Si juegan 12 → 12€ recaudados → <strong>+2€ al bote</strong><br><br>'+
-      '⚽ <strong>Fútbol 7 (F7):</strong> Campo 30€ ÷ jugadores = 2.5€/jugador<br>'+
-      'Si juegan 14 → 35€ recaudados → <strong>+5€ al bote</strong>'+
-    '</div>'+
-  '</div>';
+  // ── CUOTAS INFO ────────────────────────────────────────────────────────
+  var cuotas =
+    '<div class="card" style="padding:12px 14px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px"><i class="ti ti-info-circle" style="font-size:12px"></i> C\u00E1lculo de cuotas</div>'+
+      '<div style="font-size:12px;color:var(--muted);line-height:1.8">'+
+        '\u26BD <strong>F5 (Sala):</strong> Campo 10\u20AC &rarr; 1\u20AC/jugador &mdash; Si 12 jug &rarr; +2\u20AC bote<br>'+
+        '\u26BD <strong>F7:</strong> Campo 30\u20AC &rarr; 2.5\u20AC/jugador &mdash; Si 14 jug &rarr; +5\u20AC bote'+
+      '</div>'+
+    '</div>';
 
-  el.innerHTML = resumen + desglose + cuotas;
+  el.innerHTML = resumen + tabla + cuotas;
+
+  // Wire clicks to abrirDetallePartido
+  el.querySelectorAll('[data-hid]').forEach(function(row){
+    row.addEventListener('click', function(){
+      var hid = this.getAttribute('data-hid');
+      abrirDetallePartido(hid);
+    });
+  });
 }
 
 /* ===== CSS ===== */
