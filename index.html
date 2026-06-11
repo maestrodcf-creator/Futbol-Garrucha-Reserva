@@ -6910,53 +6910,62 @@ function toggleTemporadaDetalle(){
 }
 
 function renderTemporadaResumen(el){
-  var jugados=historial.filter(function(h){return h.estado==='jugado';});
+  var jugados = historial.filter(function(h){return h.estado==='jugado';});
   if(!jugados.length){
-    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay partidos registrados a\u00FAn</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay partidos registrados a\u00FAn</div>';
     return;
   }
-  var MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var rows = jugados.slice().reverse().map(function(h){
-    var ganA=h.scoreA>h.scoreB, ganB=h.scoreB>h.scoreA;
-    var scoreColor=ganA?'#43A047':ganB?'#E53935':'#FB8C00';
-    var parts=h.fecha?h.fecha.split('/'):['-','-','-'];
-    var dia=parts[0]||'-';
-    var mes=MESES[(parseInt(parts[1])||1)-1]||'';
-    var ganLabel=ganA?'Victoria Eq.A':ganB?'Victoria Eq.B':'Empate';
-    var nJug=(h.teamA||[]).length+(h.teamB||[]).length;
+  var MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'margin-bottom:8px;overflow:hidden';
+
+  jugados.slice().reverse().forEach(function(h){
+    var ganA = h.scoreA > h.scoreB, ganB = h.scoreB > h.scoreA;
+    var scoreColor = ganA ? '#43A047' : ganB ? '#E53935' : '#FB8C00';
+    var parts = h.fecha ? h.fecha.split('/') : ['-','-','-'];
+    var dia = parts[0]||'-';
+    var mes = MESES[(parseInt(parts[1])||1)-1]||'';
+    var ganLabel = ganA?'Victoria Eq.A':ganB?'Victoria Eq.B':'Empate';
+    var nJug = (h.teamA||[]).length + (h.teamB||[]).length;
+
     var row = document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer';
-    row.setAttribute('data-hid', h.id);
-    row.onclick = function(){ abrirDetallePartido(this.getAttribute('data-hid')); };
-    row.innerHTML =
-      '<div style="background:var(--pitch);border-radius:6px;padding:4px 7px;text-align:center;flex-shrink:0;min-width:36px">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);line-height:1">'+dia+'</div>'+
-        '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase">'+mes+'</div>'+
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer';
+
+    var fecha_html = '<div style="background:var(--pitch);border-radius:6px;padding:4px 7px;text-align:center;flex-shrink:0;min-width:36px">'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime);line-height:1">'+dia+'</div>'+
+      '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase">'+mes+'</div>'+
+    '</div>';
+
+    var info_html = '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+
+        (h.tipo==='sala'?'F\u00FAtbol Sala':'F\u00FAtbol 7')+(h.lugar?' \u00B7 '+h.lugar:'')+
       '</div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:12px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+
-          (h.tipo==='sala'?'F\u00FAtbol Sala \u2014 F5':'F\u00FAtbol 7 \u2014 F7')+(h.lugar?' \u00B7 '+h.lugar:'')+
-        '</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+ganLabel+(nJug?' \u00B7 '+nJug+' jugadores':'')+' \u203A Ver detalle</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+
+        ganLabel+(nJug?' \u00B7 '+nJug+' jugadores':'')+' \u203A Ver detalle'+
       '</div>'+
-      '<div style="text-align:right;flex-shrink:0">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:'+scoreColor+';line-height:1">'+h.scoreA+':'+h.scoreB+'</div>'+
-      '</div>';
-    return row.outerHTML;
-  }).join('');
+    '</div>';
 
-  var verMasBtn =
-    '<button onclick="showScreen(\'temporada\',document.querySelector(\'[data-screen=temporada]\'))" '+
-    'style="width:100%;border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);'+
-    'padding:10px;font-size:12px;font-weight:700;color:var(--grass);cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
-    'Ver estad\u00EDsticas completas \u2192</button>';
+    var score_html = '<div style="text-align:right;flex-shrink:0">'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:'+scoreColor+';line-height:1">'+
+        h.scoreA+':'+h.scoreB+
+      '</div>'+
+    '</div>';
 
-  el.innerHTML = '<div class="card" style="margin-bottom:8px;overflow:hidden">'+rows+'</div>'+verMasBtn;
+    row.innerHTML = fecha_html + info_html + score_html;
 
-  // Wire up clicks after innerHTML
-  el.querySelectorAll('[data-hid]').forEach(function(row){
-    row.onclick = function(){ abrirDetallePartido(this.getAttribute('data-hid')); };
+    // Capture h.id in closure
+    (function(hid){
+      row.addEventListener('click', function(){
+        abrirDetallePartido(hid);
+      });
+    })(h.id);
+
+    card.appendChild(row);
   });
+
+  el.innerHTML = '';
+  el.appendChild(card);
 }
 
 
