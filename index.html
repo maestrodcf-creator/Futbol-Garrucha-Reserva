@@ -6736,7 +6736,8 @@ var _orgSeccionTitulos = {
   'borradores': '🗓️ Programadas / Borradores',
   'activas':    '⚽ Convocatorias activas',
   'jugadores':  '👥 Jugadores registrados',
-  'partidos':   '🏆 Partidos jugados'
+  'partidos':   '🏆 Partidos jugados',
+  'cartera':    '💰 Cartera'
 };
 
 function orgAbrirSeccion(seccion){
@@ -6765,6 +6766,12 @@ function orgAbrirSeccion(seccion){
   if(seccion==='activas')    renderOrgConvsActivas();
   if(seccion==='jugadores')  { renderOrgJug(); renderListaNegra(); }
   if(seccion==='partidos')   renderOrgHistorial();
+  if(seccion==='cartera'){
+    sbLoad('cartera').then(function(ct){
+      if(ct&&typeof ct.bote==='number') cartera=ct;
+      renderCartera();
+    }).catch(function(){ renderCartera(); });
+  }
 }
 
 function orgVolverMenu(){
