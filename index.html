@@ -717,10 +717,15 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Jugadores registrados</span>
           <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Estadísticas y lista negra</span>
         </button>
-        <button onclick="orgAbrirSeccion('partidos')" style="background:var(--pitch);border:1.5px solid rgba(184,246,58,.2);border-radius:14px;padding:22px 14px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px;grid-column:1/-1">
+        <button onclick="orgAbrirSeccion('partidos')" style="background:var(--pitch);border:1.5px solid rgba(184,246,58,.2);border-radius:14px;padding:22px 14px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px">
           <span style="font-size:32px">🏆</span>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Partidos jugados</span>
-          <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Registrar resultado, editar estadísticas e historial</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Registrar resultado y estadísticas</span>
+        </button>
+        <button onclick="orgAbrirSeccion('cartera')" style="background:var(--pitch);border:1.5px solid rgba(184,246,58,.2);border-radius:14px;padding:22px 14px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px">
+          <span style="font-size:32px">💰</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Cartera</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Bote, cuotas y pagos por partido</span>
         </button>
       </div>
     </div>
@@ -740,6 +745,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <div id="org-sec-activas"    class="org-sec-panel" style="display:none"><div id="org-convs-list"></div></div>
         <div id="org-sec-jugadores"  class="org-sec-panel" style="display:none"><div id="org-jug-section"></div><div id="lista-negra-section"></div></div>
         <div id="org-sec-partidos"   class="org-sec-panel" style="display:none"><div id="org-historial-section"></div></div>
+        <div id="org-sec-cartera"   class="org-sec-panel" style="display:none"></div>
       </div>
     </div>
 
@@ -1694,6 +1700,7 @@ const sb=supabase.createClient(SURL,SKEY);
 let convocatorias=[];
 let plantillas=[];  // [{id,nombre,tipo,dia,hora,lugar,maps,coste,pagar,notas}]
 let pagos={};      // {convId: {playerName: true/false}}
+let cartera={bote:0,partidos:[]};  // acumulado del bote
 
 async function sbSave(k,v){try{await sb.from('app_data').upsert({key:k,value:JSON.stringify(v)},{onConflict:'key'});}catch(e){console.warn('sbSave',k,e);}}
 async function sbLoad(k){try{const{data}=await sb.from('app_data').select('value').eq('key',k).maybeSingle();return data?JSON.parse(data.value):null;}catch(e){return null;}}
@@ -1707,15 +1714,16 @@ async function saveCloud(){
     sbSave('pin',PIN),
     sbSave('listaNegra',listaNegra),
     sbSave('borradores',borradores),
+    sbSave('cartera',cartera),
   ]);
 }
 async function loadCloud(){
   const ss=document.getElementById('splash-status');
   if(ss)ss.textContent='Conectando...';
-  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs]=await Promise.all([
+  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs,ct]=await Promise.all([
     sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
     sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),sbLoad('listaNegra'),
-    sbLoad('borradores'),
+    sbLoad('borradores'),sbLoad('cartera'),
   ]);
   if(convs){convocatorias=convs;}
   if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
@@ -1725,6 +1733,7 @@ async function loadCloud(){
   if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
   if(ln&&Array.isArray(ln)){listaNegra=ln;}
   if(bdrs&&Array.isArray(bdrs)){borradores=bdrs;}
+  if(ct&&typeof ct.bote==='number'){cartera=ct;}
   // Re-schedule any pending auto-publishes
   borradores.filter(b=>b.status==='programado'&&b.publicarAt).forEach(b=>{
     const diff=new Date(b.publicarAt)-new Date();
@@ -2341,8 +2350,20 @@ function _renderVerListaConv(cid){
           '<span>'+pos+'</span>'+
         '</div>'+
       '</div>'+
+      // Pagado toggle
+      (function(){
+        var paid = pagos[cid] && pagos[cid][p.name];
+        return '<button data-cid="'+cid+'" data-pname="'+p.name.replace(/"/g,'&quot;')+'" '+
+          'onclick="togglePagado(this.dataset.cid,this.dataset.pname,this)" '+
+          'style="flex-shrink:0;border:1px solid '+(paid?'var(--grass)':'var(--border2)')+';'+
+          'background:'+(paid?'rgba(34,136,61,.12)':'none')+';border-radius:6px;cursor:pointer;'+
+          'padding:4px 8px;font-size:10px;font-weight:700;color:'+(paid?'var(--grass)':'var(--muted)')+';'+
+          'font-family:\'DM Sans\',sans-serif;white-space:nowrap;display:flex;align-items:center;gap:3px">'+ 
+          '<i class="ti ti-'+(paid?'check':'coin-euro')+'" style="font-size:11px"></i>'+
+          (paid?'Pagado':'Pendiente')+'</button>';
+      })()+
       // Time
-      (p.time?'<span style="font-size:10px;color:var(--muted);flex-shrink:0;font-weight:600">'+p.time+'</span>':'')+
+      (p.time?'<span style="font-size:10px;color:var(--muted);flex-shrink:0;font-weight:600;margin-left:4px">'+p.time+'</span>':'')+
     '</div>';
   }
 
@@ -5112,6 +5133,15 @@ function confirmarRegistroManual(){
     j.rojas=(j.rojas||0)+ro;
   });
 
+  // ── Calcular economía del partido ──────────────────────────────
+  var nJugadores = tit.length;
+  var costeTipo = c.tipo==='sala' ? 10 : 30;
+  var cuotaJugador = c.tipo==='sala' ? 1 : 2.5;
+  var totalRecaudado = nJugadores * cuotaJugador;
+  var botePartido = totalRecaudado - costeTipo;
+  // Registrar pagos actuales
+  var pagosPartido = {...(pagos[cid]||{})};
+
   // Push to historial
   historial.push({
     id:'manual_'+Date.now(),
@@ -5580,7 +5610,24 @@ function confirmarRegistroPartido(){
     statsJugadores,
     pagos: {...(pagos[cid]||{})},
     notas,
+    economia: {
+      tipo: c.tipo,
+      nJugadores: nJugadores,
+      costeTipo: costeTipo,
+      cuotaJugador: cuotaJugador,
+      totalRecaudado: totalRecaudado,
+      botePartido: botePartido,
+      pagosPartido: pagosPartido,
+    },
   });
+
+  // Update cartera
+  cartera.bote = (cartera.bote||0) + (botePartido>0?botePartido:0);
+  var hLast = historial[historial.length-1];
+  if(!cartera.partidos) cartera.partidos=[];
+  cartera.partidos.push({hid:hLast.id,fecha:hLast.fecha,tipo:c.tipo,
+    nJugadores:nJugadores,costeTipo:costeTipo,cuotaJugador:cuotaJugador,
+    totalRecaudado:totalRecaudado,botePartido:botePartido});
 
   // Remove conv from active list
   delete pagos[cid];
@@ -6964,6 +7011,88 @@ function renderTemporadaResumen(el){
   el.appendChild(card);
 }
 
+
+/* ===== PAGOS ===== */
+function togglePagado(cid, pname, btn){
+  if(!pagos[cid]) pagos[cid]={};
+  pagos[cid][pname] = !pagos[cid][pname];
+  var paid = pagos[cid][pname];
+  // Update button visually
+  btn.style.borderColor = paid ? 'var(--grass)' : 'var(--border2)';
+  btn.style.background  = paid ? 'rgba(34,136,61,.12)' : 'none';
+  btn.style.color       = paid ? 'var(--grass)' : 'var(--muted)';
+  btn.innerHTML = '<i class="ti ti-'+(paid?'check':'coin-euro')+'" style="font-size:11px"></i> '+(paid?'Pagado':'Pendiente');
+  saveCloud();
+}
+
+/* ===== CARTERA ===== */
+function renderCartera(){
+  var el = document.getElementById('org-sec-cartera');
+  if(!el) return;
+
+  var partidos = cartera.partidos||[];
+  var boteTotal = cartera.bote||0;
+
+  // Summary card
+  var resumen = '<div class="card" style="margin-bottom:14px;overflow:hidden">'+
+    '<div style="background:var(--pitch);padding:14px 16px">'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:rgba(184,246,58,.6);letter-spacing:.06em;margin-bottom:8px">RESUMEN DE LA TEMPORADA</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+        '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;text-align:center">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:var(--lime);line-height:1">'+boteTotal.toFixed(2)+'€</div>'+
+          '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Bote acumulado</div>'+
+        '</div>'+
+        '<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;text-align:center">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:var(--lime);line-height:1">'+partidos.length+'</div>'+
+          '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">Partidos registrados</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  // Per-match breakdown
+  var desglose = partidos.length ? '<div class="sec-label" style="margin-bottom:8px">Desglose por partido</div>'+
+    '<div class="card" style="overflow:hidden">'+
+    partidos.slice().reverse().map(function(p){
+      var tipoLabel = p.tipo==='sala'?'F5':'F7';
+      var boteColor = p.botePartido>0?'var(--grass)':p.botePartido<0?'var(--red)':'var(--muted)';
+      return '<div style="padding:10px 14px;border-bottom:1px solid var(--border)">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+          '<span style="font-size:12px;font-weight:700;color:var(--dark)">'+p.fecha+' · '+tipoLabel+'</span>'+
+          '<span style="font-size:11px;color:var(--muted)">'+p.nJugadores+' jugadores</span>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">'+
+          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
+            '<div style="font-weight:700;color:var(--dark)">−'+p.costeTipo+'€</div>'+
+            '<div style="color:var(--muted)">Coste campo</div>'+
+          '</div>'+
+          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
+            '<div style="font-weight:700;color:var(--dark)">+'+p.totalRecaudado.toFixed(1)+'€</div>'+
+            '<div style="color:var(--muted)">Recaudado</div>'+
+          '</div>'+
+          '<div style="background:var(--offwhite);border-radius:6px;padding:5px 8px;text-align:center">'+
+            '<div style="font-weight:700;color:'+boteColor+'">'+(p.botePartido>=0?'+':'')+p.botePartido.toFixed(1)+'€</div>'+
+            '<div style="color:var(--muted)">Al bote</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+    '</div>' : '<div class="empty-st" style="padding:32px 0"><i class="ti ti-coin-euro"></i><p>Sin partidos registrados aún</p></div>';
+
+  // Cuotas explainer
+  var cuotas = '<div class="card" style="margin-top:14px;padding:12px 14px">'+
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">'+
+      '<i class="ti ti-info-circle" style="font-size:12px"></i> Cálculo de cuotas</div>'+
+    '<div style="font-size:12px;color:var(--muted);line-height:1.6">'+
+      '⚽ <strong>Fútbol Sala (F5):</strong> Campo 10€ ÷ jugadores = 1€/jugador<br>'+
+      'Si juegan 12 → 12€ recaudados → <strong>+2€ al bote</strong><br><br>'+
+      '⚽ <strong>Fútbol 7 (F7):</strong> Campo 30€ ÷ jugadores = 2.5€/jugador<br>'+
+      'Si juegan 14 → 35€ recaudados → <strong>+5€ al bote</strong>'+
+    '</div>'+
+  '</div>';
+
+  el.innerHTML = resumen + desglose + cuotas;
+}
 
 /* ===== CSS ===== */
 (function(){
