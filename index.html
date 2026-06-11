@@ -2019,19 +2019,20 @@ function _renderInicioButtons(){
   if(tempWrap){
     var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
     tempWrap.innerHTML=
-      '<button onclick="showScreen(\'temporada\',document.querySelector(\'[data-screen=temporada]\'))" '+
+      '<button onclick="toggleTemporadaDetalle()" id="btn-temporada-toggle" '+
         'style="width:100%;display:flex;align-items:center;justify-content:space-between;'+
-        'background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);'+
-        'padding:14px 16px;cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+        'background:var(--pitch);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-md);'+
+        'padding:14px 16px;cursor:pointer;margin-top:8px;font-family:\'DM Sans\',sans-serif">'+
         '<div style="display:flex;align-items:center;gap:10px">'+
           '<span style="font-size:22px">\uD83C\uDFC6</span>'+
           '<div style="text-align:left">'+
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--dark);letter-spacing:.04em">Partidos de la temporada</div>'+
-            '<div style="font-size:11px;color:var(--muted)">'+nP+' partido'+(nP!==1?'s':'')+' jugados</div>'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Partidos de la temporada</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4)">'+nP+' partido'+(nP!==1?'s':'')+' jugados</div>'+
           '</div>'+
         '</div>'+
-        '<i class="ti ti-chevron-right" style="font-size:18px;color:var(--muted)"></i>'+
-      '</button>';
+        '<i class="ti ti-chevron-down" id="icon-temporada" style="font-size:18px;color:var(--muted);transition:transform .2s"></i>'+
+      '</button>'+
+      '<div id="temporada-detalle" style="display:none;margin-top:8px"></div>';
   }
 }
 
@@ -6603,13 +6604,30 @@ function renderProximasConvocatorias(){
   // Start countdown timer
   if(_proximasTimer) clearInterval(_proximasTimer);
   _proximasTimer = setInterval(function(){
+    var now = new Date();
     document.querySelectorAll('.countdown-display').forEach(function(el){
-      const pubAt = new Date(el.dataset.pubat);
-      el.textContent = _countdownStr(pubAt);
-      if(pubAt <= new Date()){
+      var pubAt = new Date(el.dataset.pubat);
+      if(pubAt <= now){
+        // Time's up — publish this borrador immediately
+        el.textContent = 'AHORA';
         clearInterval(_proximasTimer);
-        renderProximasConvocatorias();
-        renderInicioMulti();
+        _proximasTimer = null;
+        // Find which borrador this is and publish it
+        var bdr = borradores.find(function(b){
+          return b.publicarAt && Math.abs(new Date(b.publicarAt)-pubAt)<60000;
+        });
+        if(bdr){
+          _publicarBorrador(bdr.id);
+        } else {
+          // Fallback: reload data from Supabase and re-render
+          loadCloud().then(function(){
+            syncCalFromConvs();
+            renderInicioMulti();
+            if(typeof renderCalendar==='function') renderCalendar();
+          });
+        }
+      } else {
+        el.textContent = _countdownStr(pubAt);
       }
     });
   }, 1000);
@@ -6895,6 +6913,43 @@ function refreshCampoIfOpen(){
   c.teamB = tit.slice(mid).map(function(p){return p.name;});
   dibujarCampoEquipos();
 }
+
+/* ===== TEMPORADA DETALLE EN INICIO ===== */
+function toggleTemporadaDetalle(){
+  var det=document.getElementById('temporada-detalle');
+  var icon=document.getElementById('icon-temporada');
+  if(!det) return;
+  var open=det.style.display!=='none';
+  det.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(180deg)';
+  if(!open) renderTemporadaResumen(det);
+}
+
+function renderTemporadaResumen(el){
+  var jugados=historial.filter(function(h){return h.estado==='jugado';});
+  if(!jugados.length){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No hay partidos registrados a\u00FAn</div>';
+    return;
+  }
+  el.innerHTML=
+    '<div class="card" style="margin-bottom:8px">'+
+      jugados.slice().reverse().map(function(h){
+        var ganA=h.scoreA>h.scoreB,ganB=h.scoreB>h.scoreA;
+        var res=ganA?'\u{1F7E2}':ganB?'\u{1F534}':'\u{1F7E1}';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">'+
+          '<div style="font-size:12px;color:var(--muted)">'+h.fecha+'</div>'+
+          '<div style="font-size:12px;font-weight:600;color:var(--dark)">'+(h.tipo==='sala'?'Sala':'F7')+'</div>'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--dark)">'+h.scoreA+' : '+h.scoreB+'</div>'+
+          '<div style="font-size:16px">'+res+'</div>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+    '<button onclick="showScreen(\'temporada\',document.querySelector(\'[data-screen=temporada]\'))" '+
+      'style="width:100%;border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);'+
+      'padding:10px;font-size:12px;font-weight:700;color:var(--grass);cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+      'Ver estad\u00EDsticas completas \u2192</button>';
+}
+
 
 /* ===== CSS ===== */
 (function(){
