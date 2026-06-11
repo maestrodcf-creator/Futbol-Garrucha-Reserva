@@ -1913,29 +1913,34 @@ try{_myName=localStorage.getItem('pg_myname')||'';}catch(e){}
 function renderInicioMulti(){
   const el=document.getElementById('conv-list');
   if(!el)return;
-  // Show welcome bar if name is known
-  let welcomeBar=document.getElementById('welcome-bar');
-  if(!welcomeBar){
-    welcomeBar=document.createElement('div');
-    welcomeBar.id='welcome-bar';
-    el.parentNode.insertBefore(welcomeBar,el);
-  }
+
+  // Welcome bar
+  let wb=document.getElementById('welcome-bar');
+  if(!wb){wb=document.createElement('div');wb.id='welcome-bar';el.parentNode.insertBefore(wb,el);}
   if(_myName){
-    welcomeBar.innerHTML=
-      '<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px">'+
-        '<div style="width:34px;height:34px;border-radius:50%;background:var(--pitch);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--lime);flex-shrink:0">'+ini2(_myName)+'</div>'+
-        '<div style="flex:1"><div style="font-weight:700;font-size:13px;color:var(--dark)">Hola, '+_myName+'</div>'+
-          '<div style="font-size:11px;color:var(--muted)">Tu nombre esta guardado en este dispositivo</div></div>'+
-        '<button onclick="clearMyName();renderInicioMulti()" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);text-decoration:underline;padding:0;flex-shrink:0">Cambiar</button>'+
-      '</div>';
-  }else{
-    welcomeBar.innerHTML='';
-  }
+    wb.innerHTML='<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px">'+
+      '<div style="width:34px;height:34px;border-radius:50%;background:var(--pitch);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--lime);flex-shrink:0">'+ini2(_myName)+'</div>'+
+      '<div style="flex:1"><div style="font-weight:700;font-size:13px;color:var(--dark)">Hola, '+_myName+'</div>'+
+        '<div style="font-size:11px;color:var(--muted)">Tu nombre est\u00e1 guardado en este dispositivo</div></div>'+
+      '<button onclick="clearMyName();renderInicioMulti()" style="border:none;background:none;cursor:pointer;font-size:11px;color:var(--muted);text-decoration:underline;padding:0;flex-shrink:0">Cambiar</button>'+
+    '</div>';
+  } else { wb.innerHTML=''; }
+
   const activas=convocatorias.filter(c=>c.status!=='cancelado');
+
+  // Empty state — only when truly nothing
   if(!activas.length){
-    el.innerHTML='<div style="padding:12px 0;text-align:center"><div style="font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;background:var(--offwhite);border-radius:99px;padding:6px 14px"><i class="ti ti-whistle" style="font-size:12px"></i> Sin convocatorias activas</div></div>';
-    // Don't return early — still render partidos de la temporada below
+    el.innerHTML=
+      '<div class="card" style="padding:32px 20px;text-align:center">'+
+        '<i class="ti ti-whistle" style="font-size:32px;color:var(--muted);display:block;margin-bottom:10px"></i>'+
+        '<div style="font-weight:700;font-size:15px;color:var(--dark);margin-bottom:6px">Sin convocatorias activas</div>'+
+        '<div style="font-size:12px;color:var(--muted)">Crea la convocatoria semanal desde el panel del organizador</div>'+
+      '</div>';
+    _renderInicioButtons();
+    return;
   }
+
+  // Active convocatorias
   el.innerHTML=activas.map(c=>{
     const tit=getConvTit(c),MT=c.MT||(c.tipo==='sala'?12:14);
     const pct=Math.round(tit.length/MT*100);
@@ -1946,7 +1951,7 @@ function renderInicioMulti(){
         '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:44px;color:var(--lime);line-height:1">'+tit.length+'</div>'+
           '<div style="font-size:10px;color:rgba(184,246,58,.5);text-transform:uppercase;letter-spacing:.05em">de '+MT+'</div></div>'+
         '<div style="flex:1">'+
-          '<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:3px">'+(c.tipo==='sala'?'Futbol Sala':'Futbol 7')+' &mdash; '+convFechaCompleta(c)+' &middot; '+c.hora+'</div>'+
+          '<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-bottom:3px">'+(c.tipo==='sala'?'Futbol Sala':'Futbol 7')+' \u2014 '+convFechaCompleta(c)+' \u00b7 '+c.hora+'</div>'+
           '<div style="font-size:12px;color:rgba(255,255,255,.55)">'+c.lugar+'</div>'+
           '<div class="prog-bar" style="margin-top:7px"><div class="prog-fill" style="width:'+pct+'%;background:'+pc+'"></div></div>'+
           '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:rgba(184,246,58,.4);text-transform:uppercase">'+
@@ -1974,7 +1979,72 @@ function renderInicioMulti(){
       '</div>'+
     '</div>';
   }).join('');
+
+  _renderInicioButtons();
 }
+
+function _renderInicioButtons(){
+  // 1. Próximas convocatorias button (if any programmed)
+  var prox=document.getElementById('proximas-section');
+  if(prox){
+    var progCount=(typeof borradores!=='undefined')?borradores.filter(function(b){return b.status==='programado';}).length:0;
+    if(progCount>0){
+      prox.innerHTML=
+        '<button onclick="toggleProximasDetalle()" id="btn-proximas" '+
+          'style="width:100%;display:flex;align-items:center;justify-content:space-between;'+
+          'background:var(--pitch);border:1px solid rgba(184,246,58,.2);border-radius:var(--r-md);'+
+          'padding:14px 16px;cursor:pointer;margin-bottom:8px;font-family:\'DM Sans\',sans-serif">'+
+          '<div style="display:flex;align-items:center;gap:10px">'+
+            '<span style="font-size:22px">\uD83D\uDDD3\uFE0F</span>'+
+            '<div style="text-align:left">'+
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Pr\u00f3ximas convocatorias</div>'+
+              '<div style="font-size:11px;color:rgba(255,255,255,.4)">'+progCount+' programada'+(progCount>1?'s':'')+'</div>'+
+            '</div>'+
+          '</div>'+
+          '<i class="ti ti-chevron-down" id="icon-proximas" style="font-size:18px;color:var(--muted);transition:transform .2s"></i>'+
+        '</button>'+
+        '<div id="proximas-detalle" style="display:none;margin-bottom:8px"></div>';
+    } else {
+      prox.innerHTML='';
+    }
+  }
+  // 2. Temporada button
+  var tempWrap=document.getElementById('btn-temporada-inicio');
+  if(!tempWrap){
+    tempWrap=document.createElement('div');
+    tempWrap.id='btn-temporada-inicio';
+    var convList=document.getElementById('conv-list');
+    if(convList&&convList.parentNode) convList.parentNode.appendChild(tempWrap);
+  }
+  if(tempWrap){
+    var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
+    tempWrap.innerHTML=
+      '<button onclick="showScreen(\'temporada\',document.querySelector(\'[data-screen=temporada]\'))" '+
+        'style="width:100%;display:flex;align-items:center;justify-content:space-between;'+
+        'background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);'+
+        'padding:14px 16px;cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+        '<div style="display:flex;align-items:center;gap:10px">'+
+          '<span style="font-size:22px">\uD83C\uDFC6</span>'+
+          '<div style="text-align:left">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:var(--dark);letter-spacing:.04em">Partidos de la temporada</div>'+
+            '<div style="font-size:11px;color:var(--muted)">'+nP+' partido'+(nP!==1?'s':'')+' jugados</div>'+
+          '</div>'+
+        '</div>'+
+        '<i class="ti ti-chevron-right" style="font-size:18px;color:var(--muted)"></i>'+
+      '</button>';
+  }
+}
+
+function toggleProximasDetalle(){
+  var det=document.getElementById('proximas-detalle');
+  var icon=document.getElementById('icon-proximas');
+  if(!det) return;
+  var open=det.style.display!=='none';
+  det.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(180deg)';
+  if(!open) renderProximasConvocatorias();
+}
+
 
 /* ===== INSCRIPCION MULTI ===== */
 let _inscConvId=null;
@@ -6481,7 +6551,7 @@ function _tiempoRestante(date){
 let _proximasTimer = null;
 
 function renderProximasConvocatorias(){
-  const el = document.getElementById('proximas-section');
+  const el = document.getElementById('proximas-detalle');
   if(!el) return;
 
   const prog = borradores.filter(b=>b.status==='programado'&&b.publicarAt);
