@@ -2170,7 +2170,7 @@ async function _inscribirSeguro(cid, nombre, pos){
     // 6. Save only convocatorias (atomic)
     await sbSave('convocatorias', convocatorias);
     renderInicioMulti();
-    // Notify if conv is now full
+    refreshCampoIfOpen();
     notifConvLlena(c);
     showToast(rol==='tit'?'✓ Apuntado como titular':'Sin plazas, apuntado como suplente');
 
@@ -2217,6 +2217,7 @@ function salirDeConv(cid){
 
   saveCloud();
   renderInicioMulti();
+  refreshCampoIfOpen();
   showToast('Has cancelado tu inscripcion');
 
   // Show WA share modal if was titular and list was full
@@ -6348,6 +6349,7 @@ function confirmarAnadirExterno(){
   closeModal('modal-add-externo');
   renderOrgPanel();
   renderInicioMulti();
+  refreshCampoIfOpen();
   showToast((rol==='tit'?'✓ Titular: ':'Suplente: ')+nombre+' añadido');
 }
 
@@ -6872,11 +6874,27 @@ function confirmarEliminarJugador(cid, nombre){
   closeModal('modal-eliminar-jugador');
   renderOrgConvsActivas();
   renderInicioMulti();
+  refreshCampoIfOpen();
   var msg = '✓ '+nombre+' eliminado.';
   if(promovido) msg += ' '+promovido+' pasa a titular.';
   showToast(msg);
 }
 
+
+/* ===== AUTO-REFRESH CAMPO EQUIPOS ===== */
+function refreshCampoIfOpen(){
+  if(!_campoCid) return;
+  var modal = document.getElementById('modal-campo-equipos');
+  if(!modal || !modal.classList.contains('open')) return;
+  var c = convocatorias.find(function(x){return x.id===_campoCid;});
+  if(!c) return;
+  // Rebuild teams from current titulares
+  var tit = getConvTit(c);
+  var mid = Math.ceil(tit.length/2);
+  c.teamA = tit.slice(0,mid).map(function(p){return p.name;});
+  c.teamB = tit.slice(mid).map(function(p){return p.name;});
+  dibujarCampoEquipos();
+}
 
 /* ===== CSS ===== */
 (function(){
