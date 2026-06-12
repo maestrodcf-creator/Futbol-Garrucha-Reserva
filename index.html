@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 12/06/2026 21:25 -->
+<!-- Peña Garrucha v4.2 - 12/06/2026 21:39 -->
 
 
 <html lang="es">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:25</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:39</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -2703,11 +2703,6 @@ function renderOrgJug(){
   const el=document.getElementById('org-jug-section');if(!el)return;
   // Ensure jugadores populated from historial
   recalcJugadoresFromHistorial();
-  // If still no jugadores and data not ready, try again
-  if(!Object.keys(jugadores).length&&!_dataReady){
-    setTimeout(function(){recalcJugadoresFromHistorial();renderOrgJug();},1000);
-    return;
-  }
   const keys=Object.keys(jugadores);
   if(!keys.length){
     el.innerHTML='<div class="sec-label" style="margin-top:20px"><i class="ti ti-users"></i> Jugadores registrados</div>'+
@@ -2909,201 +2904,104 @@ function resetHistorial(){
   historial.length=0;saveCloud();renderHistorialEnhanced();showToast('Historial borrado');
 }
 function renderHistorialEnhanced(){
-  const el=document.getElementById('hist-list');
-  const sc=document.getElementById('sc-hist');
-  const statsEl=document.getElementById('stats-sec');
-  if(!el)return;
+  var el=document.getElementById('hist-list');
+  var statsEl=document.getElementById('stats-sec');
+  if(!el) return;
+
+  // Stats counters
+  var nJugados=historial.filter(function(h){return h.estado==='jugado';}).length;
+  var nCanc=historial.filter(function(h){return h.estado==='cancelado';}).length;
+  if(statsEl){
+    statsEl.style.display=nJugados||nCanc?'block':'none';
+    var sj=document.getElementById('stat-jug');
+    var sc2=document.getElementById('stat-canc');
+    if(sj) sj.textContent=nJugados;
+    if(sc2) sc2.textContent=nCanc;
+  }
 
   if(!historial.length){
-    el.innerHTML='<div class="empty-st"><i class="ti ti-history"></i><p>Aun no hay partidos en el historial</p></div>';
-    if(statsEl)statsEl.style.display='none';
-    if(sc&&!document.getElementById('hist-reset-bar')){
-      const bar=document.createElement('div');bar.id='hist-reset-bar';
-      bar.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px';
-      bar.innerHTML='<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo</button>';
-      const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
-    }
+    el.innerHTML='<div class="empty-st"><i class="ti ti-history"></i><p>Aún no hay partidos en el historial</p></div>';
     return;
   }
 
-  // Stats bar
-  if(statsEl){
-    statsEl.style.display='block';
-    const statJug=document.getElementById('stat-jug');
-    const statCanc=document.getElementById('stat-canc');
-    if(statJug)statJug.textContent=historial.filter(h=>h.estado==='jugado').length;
-    if(statCanc)statCanc.textContent=historial.filter(h=>h.estado==='cancelado').length;
-  }
+  el.innerHTML=historial.slice().reverse().map(function(h,ri){
+    var idx=historial.length-1-ri;
+    var jugado=h.estado==='jugado';
+    var tit=(h.players||[]).filter(function(p){return p.rol==='tit';});
+    var stats=h.statsJugadores||{};
+    var pp=pagos[h.id]||h.pagos||{};
 
-  // Action bar
-  if(sc&&!document.getElementById('hist-reset-bar')){
-    // Ensure reset bar exists
-    if(sc&&!document.getElementById('hist-reset-bar')){
-      const bar=document.createElement('div');bar.id='hist-reset-bar';
-      bar.style.cssText='display:flex;justify-content:flex-end;margin-bottom:10px';
-      bar.innerHTML='<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo</button>';
-      const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
+    // Score
+    var scoreHtml='';
+    if(jugado&&h.scoreA!==undefined){
+      var colA=h.scoreA>h.scoreB?'var(--grass)':h.scoreA<h.scoreB?'var(--red)':'var(--dark)';
+      var colB=h.scoreB>h.scoreA?'var(--grass)':h.scoreB<h.scoreA?'var(--red)':'var(--dark)';
+      var result=h.scoreA>h.scoreB?'Victoria Eq.A':h.scoreB>h.scoreA?'Victoria Eq.B':'Empate';
+      scoreHtml='<div style="display:flex;align-items:center;gap:6px;margin:6px 0">'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:36px;line-height:1;color:'+colA+'">'+h.scoreA+'</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--muted)">:</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:36px;line-height:1;color:'+colB+'">'+h.scoreB+'</div>'+
+        '<span style="font-size:11px;font-weight:700;color:var(--muted);margin-left:6px">'+result+'</span>'+
+      '</div>';
     }
-    return;
-  }
 
-  // Stats bar
-  if(statsEl){
-    statsEl.style.display='block';
-    const statJug=document.getElementById('stat-jug');
-    const statCanc=document.getElementById('stat-canc');
-    if(statJug)statJug.textContent=historial.filter(h=>h.estado==='jugado').length;
-    if(statCanc)statCanc.textContent=historial.filter(h=>h.estado==='cancelado').length;
-  }
+    // Players with stats
+    var playersHtml='';
+    if(jugado&&tit.length){
+      playersHtml='<div style="padding:0 14px 10px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px">Jugadores ('+tit.length+')</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
+        tit.map(function(p){
+          var sp=stats[p.name]||{};
+          var g=sp.goles||0; var am=sp.amarillas||0; var ro=sp.rojas||0;
+          return '<div style="display:inline-flex;align-items:center;gap:3px;background:var(--offwhite);border-radius:99px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--dark)">'+
+            p.name.split(' ')[0]+
+            (g>0?'<span style="color:var(--grass)"> '+g+'⚽</span>':'')+
+            (am>0?'<span style="color:#B8860B"> 🟨</span>':'')+
+            (ro>0?'<span style="color:var(--red)"> 🟥</span>':'')+
+          '</div>';
+        }).join('')+
+        '</div></div>';
+    }
 
-  // Action bar (Registrar partido + Borrar todo)
-  if(sc&&!document.getElementById('hist-reset-bar')){
-    const bar=document.createElement('div');bar.id='hist-reset-bar';
-    bar.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;flex-wrap:wrap';
-    bar.innerHTML=
-      '<button onclick="resetHistorial()" style="border:1px solid var(--red);background:none;border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;gap:5px"><i class="ti ti-trash"></i> Borrar todo el historial</button>';
-    const sp=sc.querySelector('.sec-pad');if(sp)sp.insertBefore(bar,sp.firstChild);
-  }
+    // Economia
+    var ecoHtml='';
+    if(jugado&&h.economia){
+      var e=h.economia;
+      ecoHtml='<div style="border-top:1px solid var(--border);padding:8px 14px;display:flex;gap:12px;font-size:11px;color:var(--muted)">'+
+        '<span>👥 '+e.nJugadores+' jug.</span>'+
+        '<span>💰 '+e.cuotaJugador+'€/jug</span>'+
+        '<span>🏟️ -'+e.costeTipo+'€ campo</span>'+
+        (e.botePartido>0?'<span style="color:var(--grass);font-weight:700">+'+e.botePartido.toFixed(1)+'€ bote</span>':'')+
+      '</div>';
+    }
 
-  el.innerHTML=historial.slice().reverse().map((h,ri)=>{
-    const idx=historial.length-1-ri;
-    const jugado=h.estado==='jugado';
-    const cancelado=h.estado==='cancelado';
-    const tit=(h.players||[]).filter(p=>p.rol==='tit');
-
-    // Score display
-    const scoreHtml=jugado&&(h.scoreA!==undefined)?
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;line-height:1;color:'+(h.scoreA>h.scoreB?'var(--grass)':h.scoreA<h.scoreB?'var(--red)':'var(--dark)')+'">'+h.scoreA+'</div>'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--muted)">:</div>'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;line-height:1;color:'+(h.scoreB>h.scoreA?'var(--grass)':h.scoreB<h.scoreA?'var(--red)':'var(--dark)')+'">'+h.scoreB+'</div>'+
-        '<span style="font-size:11px;font-weight:700;margin-left:4px;color:var(--muted)">'+(h.scoreA>h.scoreB?'A gana':h.scoreB>h.scoreA?'B gana':'Empate')+'</span>'+
-      '</div>':'';
-
-    // Goleadores
-    const goleadores=jugado?tit.filter(p=>{
-      const k=p.name.trim().toLowerCase();
-      return jugadores[k]&&jugadores[k].goles>0;
-    }):[];
-    // Get goals scored in this specific match from h.stats if stored, else show overall
-    // We use h.players stats if available
-    const statsEnPartido=h.statsJugadores||{};
-    const goleadoresPartido=jugado?tit.filter(p=>statsEnPartido[p.name]&&statsEnPartido[p.name].goles>0):[];
-    const asistPartido=jugado?tit.filter(p=>statsEnPartido[p.name]&&statsEnPartido[p.name].asistencias>0):[];
-
-    // Goleadores fallback: use players list names if no per-match stats
-    const titNames=tit.map(p=>p.name);
-
-    // Pagos
-    const pp=h.pagos||{};
-    const pagadosList=tit.filter(p=>pp[p.name]);
-    const noPagadosList=tit.filter(p=>pp[p.name]===false);
-    const hasPagos=pagadosList.length>0||noPagadosList.length>0;
-
-    // Teams
-    const eqA=(h.teamA||[]);
-    const eqB=(h.teamB||[]);
-
-    return '<div style="background:var(--card);border-radius:var(--r-md);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow)">'+
-
-      // Header stripe
+    return '<div style="background:var(--card);border-radius:var(--r-md);border:1px solid var(--border);overflow:hidden;margin-bottom:12px">'+
       '<div style="height:3px;background:'+(jugado?'linear-gradient(90deg,var(--grass),var(--lime))':'var(--red)')+'"></div>'+
-
-      // Main row
-      '<div style="padding:12px 14px 10px;display:flex;align-items:flex-start;gap:12px">'+
-
-        // Icon
-        '<div style="width:42px;height:42px;border-radius:var(--r-sm);background:'+(jugado?'rgba(34,136,61,.1)':'var(--red-l)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+      '<div style="padding:12px 14px;display:flex;align-items:flex-start;gap:12px">'+
+        '<div style="width:42px;height:42px;border-radius:var(--r-sm);background:'+(jugado?'rgba(34,136,61,.1)':'rgba(192,57,43,.1)')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
           '<i class="ti ti-ball-football" style="font-size:20px;color:'+(jugado?'var(--grass)':'var(--red)')+'"></i>'+
         '</div>'+
-
         '<div style="flex:1;min-width:0">'+
-          // Title row
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">'+
-            '<div style="font-weight:700;font-size:14px;color:var(--dark)">'+(h.tipo==='sala'?'Futbol Sala':'Futbol 7')+' &middot; '+h.dia+'</div>'+
-            '<span class="badge '+(jugado?'btit':'bcanc')+'">'+(jugado?'Jugado':'Cancelado')+'</span>'+
+            '<div style="font-weight:700;font-size:14px;color:var(--dark)">'+(h.tipo==='sala'?'Fútbol Sala':'Fútbol 7')+(h.dia?' · '+h.dia:'')+'</div>'+
+            '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:'+(jugado?'rgba(34,136,61,.1)':'rgba(192,57,43,.1)')+';color:'+(jugado?'var(--grass)':'var(--red)')+'">'+
+              (jugado?'Jugado':'Cancelado')+
+            '</span>'+
           '</div>'+
-          // Meta
-          '<div style="font-size:11px;color:var(--muted);margin-bottom:'+(jugado?'8':'0')+'px">'+
-            (h.hora?h.hora+' &middot; ':'')+
-            (h.lugar||'')+
-            (h.fecha?' &middot; '+h.fecha:'')+
+          '<div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+
+            [h.hora,h.lugar,h.fecha].filter(Boolean).join(' · ')+
           '</div>'+
-
-          // Score
-          (scoreHtml?scoreHtml:'')+
-
-          // Cancelled reason
-          (cancelado&&h.motivo?'<div style="font-size:12px;color:var(--muted);margin-top:4px"><i class="ti ti-note" style="font-size:11px"></i> '+h.motivo+'</div>':'')+
-
+          scoreHtml+
         '</div>'+
-
-        // Edit + Delete btns
-        '<div style="display:flex;gap:2px;flex-shrink:0;margin-top:2px">'+
-          (jugado?'<button data-idx="'+idx+'" onclick="abrirEditarPartido(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:#0C447C;padding:4px 6px;font-size:14px;border-radius:6px" title="Editar en Organizador"><i class="ti ti-pencil"></i></button>':'')+
-          '<button data-idx="'+idx+'" onclick="borrarEntradaHistorial(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:14px;border-radius:6px" title="Eliminar"><i class="ti ti-trash"></i></button>'+
+        '<div style="display:flex;gap:2px;flex-shrink:0">'+
+          (jugado?'<button data-idx="'+idx+'" onclick="abrirDetallePartido(this.dataset.idx)" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:14px" title="Ver detalle"><i class="ti ti-eye"></i></button>':'')+
+          '<button data-idx="'+idx+'" onclick="borrarEntradaHistorial(parseInt(this.dataset.idx))" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:4px 6px;font-size:14px" title="Eliminar"><i class="ti ti-trash"></i></button>'+
         '</div>'+
-
       '</div>'+
-
-      // Detail sections (only for jugado)
-      (jugado?(
-
-        // Players row
-        (tit.length?
-          '<div style="padding:0 14px 10px">'+
-            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px">Jugadores ('+tit.length+')</div>'+
-            '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
-              tit.map(p=>{
-                const k=p.name.trim().toLowerCase();
-                const sp=statsEnPartido[p.name];
-                const goles=sp?sp.goles:0;
-                const asist=sp?sp.asistencias:0;
-                const am=sp?sp.amarillas:0;
-                const ro=sp?sp.rojas:0;
-                const hasStat=goles>0||asist>0||am>0||ro>0;
-                return '<div style="display:inline-flex;align-items:center;gap:4px;background:var(--offwhite);border-radius:99px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--dark)">'+
-                  initials(p.name)+' '+p.name.split(' ')[0]+
-                  (goles>0?'<span style="color:var(--grass);margin-left:3px">'+goles+'⚽</span>':'')+
-                  (asist>0?'<span style="color:#0C447C;margin-left:2px">'+asist+'🅰️</span>':'')+
-                  (am>0?'<span style="color:#B8860B;margin-left:2px">'+am+'🟨</span>':'')+
-                  (ro>0?'<span style="color:var(--red);margin-left:2px">'+ro+'🟥</span>':'')+
-                '</div>';
-              }).join('')+
-            '</div>'+
-          '</div>':'') +
-
-        // Pagos section
-        (hasPagos?
-          '<div style="border-top:1px solid var(--border);padding:10px 14px">'+
-            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:7px">'+
-              'Pagos &middot; '+pagadosList.length+'/'+tit.length+' pagado'+(pagadosList.length!==1?'s':'')+
-            '</div>'+
-            '<div style="display:flex;flex-wrap:wrap;gap:5px">'+
-              tit.map(p=>{
-                const paid=pp[p.name];
-                return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid '+(paid?'var(--grass)':paid===false?'var(--red)':'rgba(0,0,0,.1)')+';color:'+(paid?'var(--grass)':paid===false?'var(--red)':'var(--muted)')+'">'+
-                  '<i class="ti ti-'+(paid?'check':paid===false?'x':'minus')+'" style="font-size:10px"></i> '+p.name.split(' ')[0]+
-                '</span>';
-              }).join('')+
-            '</div>'+
-          '</div>':'')
-
-      ):'')+ // end jugado sections
-
-      // Registro partido button (only for closed convs)
-      +(c.status==='cerrada'?
-        '<div style="border-top:1px solid var(--border);padding:10px 14px">'+
-          '<button class="btn-green" style="width:100%" data-cid="'+cid+'" onclick="abrirRegistroPartido(this.dataset.cid)">'+
-            '<i class="ti ti-clipboard-plus"></i> Registrar resultado del partido'+
-          '</button>'+
-        '</div>':
-        '<div style="border-top:1px solid var(--border);padding:8px 14px;font-size:11px;color:var(--muted)">'+
-          '<i class="ti ti-info-circle" style="font-size:12px"></i> Cierra la convocatoria para registrar el resultado'+
-        '</div>'
-      )
-
-    '</div>'; // end card
+      playersHtml+
+      ecoHtml+
+    '</div>';
   }).join('');
 }
 
@@ -8052,7 +7950,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:25:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:39:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
