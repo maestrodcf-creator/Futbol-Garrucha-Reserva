@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.0 - 12/06/2026 13:33 -->
+<!-- Peña Garrucha v4.0 - 12/06/2026 13:47 -->
 
 
 <html lang="es">
@@ -499,9 +499,9 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <button class="snb" data-screen="calendario" onclick="showScreen('calendario',this)"><i class="ti ti-calendar"></i> Calendario</button>
     <button class="snb" data-screen="jugadores" onclick="showScreen('jugadores',this)"><i class="ti ti-users"></i> Jugadores</button>
     <button class="snb" data-screen="hist" onclick="showScreen('hist',this)"><i class="ti ti-history"></i> Historial</button>
-    <button class="snb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i> Temporada</button>
-    <button class="snb" data-screen="org" id="snb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i> Organizador</button>
+    <button class="snb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i> Estadísticas</button>
     <button class="snb" data-screen="temporadas" onclick="showScreen('temporadas',this)"><i class="ti ti-trophy"></i> Temporadas</button>
+    <button class="snb" data-screen="org" id="snb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i> Organizador</button>
   </div>
   <div class="sidebar-conv-info" id="sidebar-conv-info">
     <div class="sci-label">Conv. activa</div>
@@ -646,6 +646,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <div class="empty-st"><i class="ti ti-users"></i><span class="emph">Sin jugadores registrados</span><p>Los jugadores aparecerán aquí cuando se inscriban en una convocatoria.</p></div>
         </div>
       </div>
+      <!-- FIFA panel -->
+      <div id="jug-panel-fifa" class="sec-pad" style="display:none;padding-top:14px">
+        <div id="jugadores-fifa-list"></div>
+      </div>
     </div>
 
     <!-- ─── HISTORIAL ─── -->
@@ -686,7 +690,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.0 - 12/06/2026 13:33</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.0 - 12/06/2026 13:47</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -3611,7 +3615,12 @@ function renderPerfil(j){
 
     // ── Hero card ──────────────────────────────────────────────────────
     '<div style="background:var(--pitch);border-radius:var(--r-md);padding:18px 18px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px">'+
-      '+buildAvatarTokenPerfil(j.name)+'
+      '<div style="position:relative;cursor:pointer;display:inline-block" class="av-edit-wrap" data-avname="'+j.name+'">'+
+        '+buildAvatarTokenPerfil(j.name)+'
+        '<div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-radius:50%;background:var(--grass);display:flex;align-items:center;justify-content:center;border:2px solid var(--pitch)">'+
+          '<i class="ti ti-pencil" style="font-size:10px;color:#fff"></i>'+
+        '</div>'+
+      '</div>'+
       '<div style="flex:1">'+
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--lime);letter-spacing:.04em;line-height:1">'+j.name+'</div>'+
         '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px">'+posNombre+
@@ -3722,7 +3731,36 @@ function renderPerfil(j){
     // Back bottom
     '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))" '+
       'style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:1px solid var(--border2);border-radius:var(--r-sm);background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);font-family:\'DM Sans\',sans-serif;margin-top:4px">'+
-      '<i class="ti ti-arrow-left" style="font-size:14px"></i> Volver a jugadores</button>';
+      '<div style="margin-bottom:14px">'+
+    '<div class="sec-label" style="margin-bottom:10px"><i class="ti ti-id-badge" style="font-size:13px"></i> Carta FIFA</div>'+
+    (function(){
+      var k3=j.name.trim().toLowerCase();
+      var rats3=(jugadores[k3]||{}).ratings||{};
+      var FC=[{key:'ritmo',l:'Ritmo'},{key:'disparo',l:'Disparo'},{key:'pase',l:'Pase'},{key:'regate',l:'Regate'},{key:'defensa',l:'Defensa'},{key:'fisico',l:'Fisico'},{key:'liderazgo',l:'Liderazgo'},{key:'porteria',l:'Porteria'}];
+      var med3=getRatingMedia(rats3);
+      var mc3=med3>=85?'#FFD700':med3>=75?'#5cb85c':med3>=60?'#5bc0de':'#aaa';
+      var bars3=FC.map(function(c){
+        var v=rats3[c.key]||50;
+        var col=v>=85?'#FFD700':v>=75?'#5cb85c':v>=60?'#5bc0de':'#aaa';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
+          '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);width:68px;text-align:right">'+c.l.toUpperCase()+'</span>'+
+          '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:'+col+';width:24px;text-align:center">'+v+'</span>'+
+          '<div style="flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px">'+
+            '<div style="height:100%;width:'+v+'%;background:'+col+';border-radius:3px"></div>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+      return '<div class="card" style="background:linear-gradient(160deg,#1a2a1a,#0d1f0d);border:1px solid rgba(184,246,58,.15);padding:14px 16px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+          '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:'+mc3+';line-height:1">'+med3+'</div>'+
+          '<div style="font-size:10px;color:rgba(184,246,58,.5);letter-spacing:.08em">MEDIA GENERAL</div></div>'+
+          '<div style="text-align:right;font-size:10px;color:rgba(184,246,58,.3);font-weight:700;letter-spacing:.1em">PEÑA GARRUCHA</div>'+
+        '</div>'+
+        bars3+
+      '</div>';
+    })()+
+  '</div>'+
+    '<i class="ti ti-arrow-left" style="font-size:14px"></i> Volver a jugadores</button>';
 }
 
 
@@ -7578,6 +7616,84 @@ function confirmarArchivarTemporada(){
   if(typeof renderCalendar==='function') renderCalendar();
 }
 
+/* ===== JUGADORES TABS ===== */
+function jugTab(tab){
+  var statsBtn = document.getElementById('jug-tab-stats');
+  var fifaBtn  = document.getElementById('jug-tab-fifa');
+  var statsPanel = document.getElementById('jug-panel-stats');
+  var fifaPanel  = document.getElementById('jug-panel-fifa');
+  if(!statsBtn) return;
+
+  if(tab==='stats'){
+    statsBtn.style.color = 'var(--grass)';
+    statsBtn.style.borderBottom = '2px solid var(--grass)';
+    fifaBtn.style.color = 'var(--muted)';
+    fifaBtn.style.borderBottom = '2px solid transparent';
+    statsPanel.style.display = '';
+    fifaPanel.style.display = 'none';
+  } else {
+    statsBtn.style.color = 'var(--muted)';
+    statsBtn.style.borderBottom = '2px solid transparent';
+    fifaBtn.style.color = 'var(--grass)';
+    fifaBtn.style.borderBottom = '2px solid var(--grass)';
+    statsPanel.style.display = 'none';
+    fifaPanel.style.display = '';
+    renderFifaList();
+  }
+}
+
+function renderFifaList(){
+  var el = document.getElementById('jugadores-fifa-list');
+  if(!el) return;
+  var keys = Object.keys(jugadores);
+  if(!keys.length){
+    el.innerHTML = '<div class="empty-st"><i class="ti ti-id-badge"></i><p>Sin jugadores registrados</p></div>';
+    return;
+  }
+  var sorted = Object.values(jugadores).sort(function(a,b){
+    return getRatingMedia((jugadores[(b.name||'').toLowerCase()]||{}).ratings) -
+           getRatingMedia((jugadores[(a.name||'').toLowerCase()]||{}).ratings);
+  });
+
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">'+
+    sorted.map(function(j){
+      var k = (j.name||'').trim().toLowerCase();
+      var rats = (jugadores[k]||{}).ratings||{};
+      var med = getRatingMedia(rats);
+      var mc = med>=85?'#FFD700':med>=75?'#5cb85c':med>=60?'#5bc0de':'#aaa';
+      var av = getAvatar(j.name);
+      var avHtml = av.type==='emoji'
+        ? '<div style="font-size:36px;margin-bottom:6px">'+av.val+'</div>'
+        : '<div style="width:52px;height:52px;border-radius:50%;background:'+av.bg+';display:flex;align-items:center;justify-content:center;font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:'+av.fg+';margin:0 auto 6px">'+av.initials+'</div>';
+      var pos = Object.entries(j.posiciones||{}).sort(function(a,b){return b[1]-a[1];})[0];
+      var posLabel = pos&&posLabels?posLabels[pos[0]]||pos[0]:'—';
+      var posAbrev = (j.posicion||posLabel)==='Portero'?'POR':(j.posicion||posLabel)==='Defensa'?'DEF':(j.posicion||posLabel)==='Delantero'?'DEL':'MED';
+
+      // Mini bars for top 4 stats
+      var FC4 = [{key:'ritmo',l:'RIT'},{key:'disparo',l:'DIS'},{key:'defensa',l:'DEF'},{key:'fisico',l:'FIS'}];
+      var bars4 = FC4.map(function(c){
+        var v=rats[c.key]||50;
+        var col=v>=85?'#FFD700':v>=75?'#5cb85c':v>=60?'#5bc0de':'#aaa';
+        return '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'+
+          '<span style="font-size:9px;color:rgba(255,255,255,.4);width:22px">'+c.l+'</span>'+
+          '<span style="font-size:10px;font-weight:700;color:'+col+';width:18px;text-align:right">'+v+'</span>'+
+          '<div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px">'+
+            '<div style="height:100%;width:'+v+'%;background:'+col+';border-radius:2px"></div>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+
+      return '<div style="background:linear-gradient(160deg,#1a2a1a,#0d1f0d);border:1px solid rgba(184,246,58,.15);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:center" onclick="abrirPerfil(\''+j.name.replace(/'/g,"\\'")+'\')" >'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:rgba(184,246,58,.4);margin-bottom:8px">'+posAbrev+'</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:44px;color:'+mc+';line-height:1;margin-bottom:4px">'+med+'</div>'+
+        avHtml+
+        '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:10px">'+j.name+'</div>'+
+        bars4+
+      '</div>';
+    }).join('')+
+  '</div>';
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -8023,7 +8139,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
-      .then(function(reg){console.log('SW v4.0 - 12/06/2026 13:33:',reg.scope);})
+      .then(function(reg){console.log('SW v4.0 - 12/06/2026 13:47:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
