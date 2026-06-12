@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 12/06/2026 21:02 -->
+<!-- Peña Garrucha v4.2 - 12/06/2026 21:25 -->
 
 
 <html lang="es">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:02</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:25</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -1723,6 +1723,7 @@ let convocatorias=[];
 let plantillas=[];  // [{id,nombre,tipo,dia,hora,lugar,maps,coste,pagar,notas}]
 let pagos={};      // {convId: {playerName: true/false}}
 let cartera={bote:0,partidos:[]};  // acumulado del bote
+let _dataReady=false;  // true after loadCloud completes
 let temporadas=[];  // archived seasons [{id,nombre,fechaInicio,fechaFin,historial,cartera,jugadores}]
 let temporadaActual='25/26';  // current season label
 let pushSubs=[];  // [{name, endpoint, keys}] push subscriptions
@@ -1862,7 +1863,15 @@ function patchShowScreen(){
     if(id==='avatar'){renderAvatarEditor();}
     if(id==='editar-conv'){/* content already rendered by abrirEditarConvScreen */}
     if(id==='hist')renderHistorialEnhanced();
-    if(id==='dashboard'){recalcJugadoresFromHistorial();renderDashboard();renderJugadoresRanking();}
+    if(id==='dashboard'){
+      if(!_dataReady){
+        var el=document.getElementById('dashboard-content');
+        if(el)el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="ti ti-loader-2" style="font-size:32px;display:block;margin-bottom:10px"></i>Cargando datos...</div>';
+        setTimeout(function(){recalcJugadoresFromHistorial();renderDashboard();renderJugadoresRanking();},800);
+      } else {
+        recalcJugadoresFromHistorial();renderDashboard();renderJugadoresRanking();
+      }
+    }
     if(id==='inicio')renderInicioMulti();
   };
 }
@@ -2693,7 +2702,12 @@ function guardarAsistencia(){
 function renderOrgJug(){
   const el=document.getElementById('org-jug-section');if(!el)return;
   // Ensure jugadores populated from historial
-  if(Object.keys(jugadores).length===0) recalcJugadoresFromHistorial();
+  recalcJugadoresFromHistorial();
+  // If still no jugadores and data not ready, try again
+  if(!Object.keys(jugadores).length&&!_dataReady){
+    setTimeout(function(){recalcJugadoresFromHistorial();renderOrgJug();},1000);
+    return;
+  }
   const keys=Object.keys(jugadores);
   if(!keys.length){
     el.innerHTML='<div class="sec-label" style="margin-top:20px"><i class="ti ti-users"></i> Jugadores registrados</div>'+
@@ -6732,7 +6746,13 @@ function orgAbrirSeccion(seccion){
   if(seccion==='nueva')      { renderOrgNewConvForm(); renderPlantillas(); }
   if(seccion==='borradores') renderOrgBorradores();
   if(seccion==='activas')    renderOrgConvsActivas();
-  if(seccion==='jugadores')  { recalcJugadoresFromHistorial(); renderOrgJug(); renderListaNegra(); }
+  if(seccion==='jugadores')  {
+    recalcJugadoresFromHistorial();
+    renderOrgJug();
+    renderListaNegra();
+    // Re-render after delay if still loading
+    if(!_dataReady) setTimeout(function(){recalcJugadoresFromHistorial();renderOrgJug();},800);
+  }
   if(seccion==='partidos')   renderOrgHistorial();
   if(seccion==='cartera'){
     sbLoad('cartera').then(function(ct){
@@ -7651,16 +7671,16 @@ window.addEventListener('load',function(){
     startTimerTick();
     startRealtime();
     hideSplash();
-    // Re-render after a short delay to catch any timing issues
-    setTimeout(function(){
-      recalcJugadoresFromHistorial();
-      renderHistorialEnhanced();
-      renderDashboard();
-      renderJugadoresRanking();
-      renderJugadoresEnhanced();
-    }, 500);
+    _dataReady=true;
+    // Re-render everything with fresh data
+    recalcJugadoresFromHistorial();
+    renderHistorialEnhanced();
+    renderDashboard();
+    renderJugadoresRanking();
+    renderJugadoresEnhanced();
   }).catch(function(e){
     console.error('loadCloud error:',e);
+    _dataReady=true;
     hideSplash();
   });
 });
@@ -8032,7 +8052,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:02:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:25:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
