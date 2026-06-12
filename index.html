@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v3.4 - 10/06/2026 19:50 -->
+<!-- Peña Garrucha v4.0 - 12/06/2026 09:16 -->
 
 
 <html lang="es">
@@ -501,6 +501,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <button class="snb" data-screen="hist" onclick="showScreen('hist',this)"><i class="ti ti-history"></i> Historial</button>
     <button class="snb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i> Temporada</button>
     <button class="snb" data-screen="org" id="snb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i> Organizador</button>
+    <button class="snb" data-screen="temporadas" onclick="showScreen('temporadas',this)"><i class="ti ti-trophy"></i> Temporadas</button>
   </div>
   <div class="sidebar-conv-info" id="sidebar-conv-info">
     <div class="sci-label">Conv. activa</div>
@@ -685,7 +686,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v3.4</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.0 - 12/06/2026 09:16</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -726,6 +727,11 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <span style="font-size:32px">💰</span>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Cartera</span>
           <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Bote, cuotas y pagos por partido</span>
+        </button>
+        <button onclick="archivarTemporada()" style="background:var(--pitch);border:1.5px solid rgba(192,57,43,.3);border-radius:14px;padding:22px 14px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px;grid-column:1/-1">
+          <span style="font-size:32px">🏆</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--red);letter-spacing:.04em">Archivar Temporada</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.4">Cerrar la temporada actual y empezar nueva</span>
         </button>
       </div>
     </div>
@@ -785,6 +791,12 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <div id="perfil-content"></div>
       </div>
     </div>
+
+    <!-- ─── TEMPORADAS ─── -->
+    <div id="sc-temporadas" class="screen">
+      <div class="sec-head"><div class="sec-title">TEMPORADAS</div><div class="sec-sub">Historial de temporadas</div></div>
+      <div class="sec-pad" id="temporadas-content"></div>
+    </div>
   </div><!-- /content -->
 </div><!-- /main -->
 </div><!-- /layout -->
@@ -798,6 +810,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   <button class="nb" data-screen="jugadores" onclick="showScreen('jugadores',this)"><i class="ti ti-users"></i><span>Jugadores</span></button>
   <button class="nb" data-screen="dashboard" onclick="showScreen('dashboard',this)"><i class="ti ti-chart-bar"></i><span>Temp.</span></button>
   <button class="nb" data-screen="org" id="nb-org" onclick="showScreen('org',this)"><i class="ti ti-settings"></i><span>Org.</span></button>
+  <button class="nb" data-screen="temporadas" onclick="showScreen('temporadas',this)"><i class="ti ti-trophy"></i><span>Temps.</span></button>
 </nav>
 
 <!-- ══════════════ MODALES ══════════════ -->
@@ -1701,6 +1714,9 @@ let convocatorias=[];
 let plantillas=[];  // [{id,nombre,tipo,dia,hora,lugar,maps,coste,pagar,notas}]
 let pagos={};      // {convId: {playerName: true/false}}
 let cartera={bote:0,partidos:[]};  // acumulado del bote
+let temporadas=[];  // archived seasons [{id,nombre,fechaInicio,fechaFin,historial,cartera,jugadores}]
+let temporadaActual='25/26';  // current season label
+let pushSubs=[];  // [{name, endpoint, keys}] push subscriptions
 
 async function sbSave(k,v){try{await sb.from('app_data').upsert({key:k,value:JSON.stringify(v)},{onConflict:'key'});}catch(e){console.warn('sbSave',k,e);}}
 async function sbLoad(k){try{const{data}=await sb.from('app_data').select('value').eq('key',k).maybeSingle();return data?JSON.parse(data.value):null;}catch(e){return null;}}
@@ -1715,15 +1731,17 @@ async function saveCloud(){
     sbSave('listaNegra',listaNegra),
     sbSave('borradores',borradores),
     sbSave('cartera',cartera),
+    sbSave('temporadas',temporadas),
+    sbSave('pushSubs',pushSubs),
   ]);
 }
 async function loadCloud(){
   const ss=document.getElementById('splash-status');
   if(ss)ss.textContent='Conectando...';
-  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs,ct]=await Promise.all([
+  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs,ct,tmpds,psubs]=await Promise.all([
     sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
     sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),sbLoad('listaNegra'),
-    sbLoad('borradores'),sbLoad('cartera'),
+    sbLoad('borradores'),sbLoad('cartera'),sbLoad('temporadas'),sbLoad('pushSubs'),
   ]);
   if(convs){convocatorias=convs;}
   if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
@@ -1734,6 +1752,8 @@ async function loadCloud(){
   if(ln&&Array.isArray(ln)){listaNegra=ln;}
   if(bdrs&&Array.isArray(bdrs)){borradores=bdrs;}
   if(ct&&typeof ct.bote==='number'){cartera=ct;}
+  if(tmpds&&Array.isArray(tmpds)){temporadas=tmpds;}
+  if(psubs&&Array.isArray(psubs)){pushSubs=psubs;}
   // Re-schedule any pending auto-publishes
   borradores.filter(b=>b.status==='programado'&&b.publicarAt).forEach(b=>{
     const diff=new Date(b.publicarAt)-new Date();
@@ -1817,6 +1837,7 @@ function patchShowScreen(){
   const orig=showScreen;
   showScreen=function(id,btn){
     orig(id,btn);
+    if(id==='temporadas')renderTemporadas();
     if(id==='org'&&pinUnlocked){
       // Reset form so it renders fresh
       var fc=document.getElementById('org-form-col');
@@ -2703,6 +2724,16 @@ function renderOrgJug(){
       });
     });
   },50);
+
+  // Wire FIFA card buttons
+  var jSec=document.getElementById('org-jug-section');
+  if(jSec&&!jSec._fifaWired){
+    jSec._fifaWired=true;
+    jSec.addEventListener('click',function(e){
+      var btn=e.target.closest('.jug-fifa-btn');
+      if(btn){e.stopPropagation();abrirFifaCard(decodeURIComponent(btn.getAttribute('data-jn')));}
+    });
+  }
 }
 function orgBorrarJugador(name){
   if(!confirm('Eliminar a '+name+'?'))return;
@@ -7188,6 +7219,351 @@ function getPagadorTipo(){
   return (el&&el.checked) ? 'ext' : 'org';
 }
 
+/* ===== FIFA CARD SYSTEM ===== */
+var FIFA_CATS = [
+  {key:'ritmo',    label:'Ritmo',    icon:'ti-run'},
+  {key:'disparo',  label:'Disparo',  icon:'ti-ball-football'},
+  {key:'pase',     label:'Pase',     icon:'ti-arrow-right'},
+  {key:'regate',   label:'Regate',   icon:'ti-zig-zag'},
+  {key:'defensa',  label:'Defensa',  icon:'ti-shield'},
+  {key:'fisico',   label:'Físico',   icon:'ti-barbell'},
+  {key:'liderazgo',label:'Liderazgo',icon:'ti-crown'},
+  {key:'porteria', label:'Portería', icon:'ti-hand-stop'},
+];
+
+function getRatingMedia(ratings){
+  if(!ratings) return 0;
+  var vals = FIFA_CATS.slice(0,6).map(function(c){return ratings[c.key]||50;});
+  return Math.round(vals.reduce(function(s,v){return s+v;},0)/vals.length);
+}
+
+function getRatingColor(v){
+  if(v>=85) return '#FFD700';
+  if(v>=75) return '#5cb85c';
+  if(v>=60) return '#5bc0de';
+  return '#aaa';
+}
+
+function abrirFifaCard(nombre){
+  var j = jugadores[nombre]||{};
+  var ratings = j.ratings||{};
+  var pos = j.posicion||'MED';
+  var media = getRatingMedia(ratings);
+  var av = getAvatar(nombre);
+  var medColor = getRatingColor(media);
+  var posAbrev = pos==='Portero'?'POR':pos==='Defensa'?'DEF':pos==='Delantero'?'DEL':'MED';
+
+  var catHtml = FIFA_CATS.map(function(c){
+    var val = ratings[c.key]||50;
+    var barColor = getRatingColor(val);
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+
+      '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);width:60px;text-align:right">'+c.label.toUpperCase()+'</span>'+
+      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:'+barColor+';width:26px;text-align:center">'+val+'</span>'+
+      '<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px">'+
+        '<div style="height:100%;width:'+val+'%;background:'+barColor+';border-radius:3px;transition:width .3s"></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  var avatarHtml = av.type==='emoji'
+    ? '<div style="width:72px;height:72px;border-radius:50%;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 8px">'+av.emoji+'</div>'
+    : '<div style="width:72px;height:72px;border-radius:50%;background:'+av.bg+';display:flex;align-items:center;justify-content:center;font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:'+av.fg+';margin:0 auto 8px">'+av.initials+'</div>';
+
+  var modal = document.getElementById('modal-fifa');
+  if(!modal){ modal=document.createElement('div'); modal.id='modal-fifa'; modal.className='modal-bg'; document.body.appendChild(modal); }
+
+  modal.innerHTML =
+    '<div class="modal" style="background:linear-gradient(160deg,#1a2a1a 0%,#0d1f0d 100%);border:1px solid rgba(184,246,58,.2)">'+
+    '<div class="modal-handle"></div>'+
+    // Card header
+    '<div style="text-align:center;padding:16px 0 8px">'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:rgba(184,246,58,.5);text-transform:uppercase;margin-bottom:4px">Peña Garrucha</div>'+
+      '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">'+
+        '<div style="text-align:center">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;color:'+medColor+';line-height:1">'+media+'</div>'+
+          '<div style="font-size:10px;font-weight:700;color:'+medColor+';letter-spacing:.08em">'+posAbrev+'</div>'+
+        '</div>'+
+        '<div>'+avatarHtml+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:#fff;letter-spacing:.04em">'+nombre+'</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    // Stats
+    '<div style="padding:0 16px 8px">'+catHtml+'</div>'+
+    // Edit button
+    '<div style="padding:8px 14px 14px;display:flex;gap:8px">'+
+      '<button onclick="editarFifaCard(\''+nombre+'\')" style="flex:1;border:1px solid var(--grass);background:rgba(34,136,61,.1);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;color:var(--grass);cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+        '<i class="ti ti-pencil" style="font-size:13px"></i> Editar valoraciones</button>'+
+      '<button onclick="closeModal(\'modal-fifa\')" style="border:1px solid var(--border2);background:none;border-radius:var(--r-sm);padding:10px;font-size:12px;color:var(--muted);cursor:pointer;font-family:\'DM Sans\',sans-serif">Cerrar</button>'+
+    '</div>'+
+    '</div>';
+
+  openModal('modal-fifa');
+}
+
+function editarFifaCard(nombre){
+  var j = jugadores[nombre]||{};
+  var ratings = j.ratings||{};
+
+  var modal = document.getElementById('modal-fifa-edit');
+  if(!modal){ modal=document.createElement('div'); modal.id='modal-fifa-edit'; modal.className='modal-bg'; document.body.appendChild(modal); }
+
+  var inputs = FIFA_CATS.map(function(c){
+    var val = ratings[c.key]||50;
+    return '<div style="margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'+
+        '<label style="font-size:12px;font-weight:700;color:var(--dark)"><i class="ti '+c.icon+'"></i> '+c.label+'</label>'+
+        '<span id="val-'+c.key+'" style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--lime)">'+val+'</span>'+
+      '</div>'+
+      '<input type="range" min="0" max="100" value="'+val+'" id="inp-'+c.key+'" '+
+        'oninput="document.getElementById(\'val-'+c.key+'\').textContent=this.value" '+
+        'style="width:100%;accent-color:var(--grass)">'+
+    '</div>';
+  }).join('');
+
+  modal.innerHTML =
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<h2>Valoraciones — '+nombre+'</h2>'+
+    '<div style="padding:0 4px">'+inputs+'</div>'+
+    '<div style="padding:8px 4px 0;display:flex;gap:8px">'+
+      '<button onclick="guardarFifaCard(\''+nombre+'\')" class="btn-green" style="flex:1"><i class="ti ti-check"></i> Guardar</button>'+
+      '<button onclick="closeModal(\'modal-fifa-edit\')" class="btn-outline">Cancelar</button>'+
+    '</div>'+
+    '</div>';
+
+  openModal('modal-fifa-edit');
+}
+
+function guardarFifaCard(nombre){
+  if(!jugadores[nombre]) jugadores[nombre]={};
+  if(!jugadores[nombre].ratings) jugadores[nombre].ratings={};
+  FIFA_CATS.forEach(function(c){
+    var el=document.getElementById('inp-'+c.key);
+    if(el) jugadores[nombre].ratings[c.key]=parseInt(el.value);
+  });
+  saveCloud();
+  closeModal('modal-fifa-edit');
+  showToast('✓ Valoraciones de '+nombre+' guardadas');
+  // Reopen card
+  setTimeout(function(){ abrirFifaCard(nombre); }, 200);
+}
+
+/* ===== PUSH NOTIFICATIONS ===== */
+var VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBFkG7kX1-LJtQ_uBVJh3WC8WCug';
+
+async function solicitarNotificaciones(nombre){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    showToast('Tu navegador no soporta notificaciones push');
+    return false;
+  }
+  try {
+    var perm = await Notification.requestPermission();
+    if(perm !== 'granted'){
+      showToast('Notificaciones bloqueadas');
+      return false;
+    }
+    var reg = await navigator.serviceWorker.ready;
+    var existing = await reg.pushManager.getSubscription();
+    var sub = existing || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    var subData = JSON.parse(JSON.stringify(sub));
+    subData.nombre = nombre || 'Jugador';
+    // Remove old sub for this player
+    pushSubs = pushSubs.filter(function(s){ return s.nombre !== subData.nombre; });
+    pushSubs.push(subData);
+    await saveCloud();
+    showToast('\uD83D\uDD14 Notificaciones activadas para '+subData.nombre);
+    return true;
+  } catch(e){
+    console.error('Push error:', e);
+    showToast('Error al activar notificaciones: '+e.message);
+    return false;
+  }
+}
+
+function _urlBase64ToUint8Array(base64String){
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = window.atob(base64);
+  var outputArray = new Uint8Array(rawData.length);
+  for(var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+function mostrarModalNotificaciones(){
+  var modal = document.getElementById('modal-push');
+  if(!modal){ modal=document.createElement('div'); modal.id='modal-push'; modal.className='modal-bg'; document.body.appendChild(modal); }
+  var yaActivado = false;
+  try {
+    var reg_check = navigator.serviceWorker.controller;
+    yaActivado = Notification.permission === 'granted';
+  } catch(e){}
+  modal.innerHTML =
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<h2>\uD83D\uDD14 Activar notificaciones</h2>'+
+    '<p class="msub">Recibe un aviso cuando se abra una convocatoria, incluso con la app cerrada.</p>'+
+    (yaActivado?'<div style="background:rgba(34,136,61,.1);border:1px solid rgba(34,136,61,.3);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--grass)"><i class="ti ti-check"></i> Notificaciones ya activadas en este dispositivo</div>':'')+
+    '<div style="margin-bottom:12px">'+
+      '<div class="fl" style="margin-top:0">Tu nombre</div>'+
+      '<input class="fi" type="text" id="push-nombre" placeholder="Ej: Juan" value="'+(window._myName||'')+'" list="dl-jugadores">'+
+      '<datalist id="dl-jugadores"></datalist>'+
+    '</div>'+
+    '<button onclick="activarPushConNombre()" class="btn-green" style="width:100%;margin-bottom:8px"><i class="ti ti-bell"></i> Activar notificaciones</button>'+
+    '<button onclick="closeModal(\'modal-push\')" class="btn-outline" style="width:100%">Ahora no</button>'+
+    '</div>';
+  // Populate datalist
+  openModal('modal-push');
+  setTimeout(function(){
+    var dl = document.getElementById('dl-jugadores');
+    if(dl) Object.keys(jugadores).forEach(function(n){ var opt=document.createElement('option'); opt.value=n; dl.appendChild(opt); });
+  }, 100);
+}
+
+async function activarPushConNombre(){
+  var nombre = (document.getElementById('push-nombre')||{}).value||'';
+  if(!nombre.trim()){ showToast('Escribe tu nombre'); return; }
+  closeModal('modal-push');
+  await solicitarNotificaciones(nombre.trim());
+}
+
+function _enviarNotifConvocatoria(c){
+  // Show local notification via SW if permission granted
+  if(Notification.permission!=='granted') return;
+  navigator.serviceWorker.ready.then(function(reg){
+    var tipo = c.tipo==='sala'?'Fútbol Sala':'Fútbol 7';
+    reg.showNotification('⚽ Convocatoria abierta — '+tipo, {
+      body: convFechaCompleta(c)+' a las '+c.hora+(c.lugar?' · '+c.lugar:''),
+      icon: '/Futbol-Garrucha-Reserva/icon-192.png',
+      badge: '/Futbol-Garrucha-Reserva/icon-192.png',
+      tag: 'conv-'+c.id,
+      data: {url: location.href}
+    });
+  }).catch(function(e){ console.log('Notif error:', e); });
+}
+
+/* ===== TEMPORADAS ===== */
+function renderTemporadas(){
+  var el=document.getElementById('temporadas-content');
+  if(!el) return;
+  var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
+  var nJ=Object.keys(jugadores).length;
+  var html2=
+    '<div class="card" style="margin-bottom:16px;overflow:hidden">'+
+      '<div style="background:var(--pitch);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">'+
+        '<div>'+
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--grass)">Temporada actual</div>'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:var(--lime);letter-spacing:.04em;line-height:1">'+temporadaActual+'</div>'+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--dark)">'+nP+'</div>'+
+          '<div style="font-size:10px;color:var(--muted);text-transform:uppercase">Partidos</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="padding:10px 14px;display:flex;gap:16px">'+
+        '<div style="font-size:12px;color:var(--muted)"><strong style="color:var(--dark)">'+nJ+'</strong> jugadores</div>'+
+        '<div style="font-size:12px;color:var(--muted)"><strong style="color:var(--grass)">'+(cartera.bote||0).toFixed(2)+'\u20AC</strong> en el bote</div>'+
+      '</div>'+
+    '</div>';
+  if(temporadas.length){
+    html2+='<div class="sec-label" style="margin-bottom:8px"><i class="ti ti-archive" style="font-size:13px"></i> Temporadas archivadas</div>';
+    temporadas.slice().reverse().forEach(function(t){
+      var nTP=(t.historial||[]).filter(function(h){return h.estado==='jugado';}).length;
+      var bote=t.cartera?(t.cartera.bote||0).toFixed(2):'0.00';
+      html2+=
+        '<div class="card" style="margin-bottom:10px;overflow:hidden;cursor:pointer" onclick="toggleTemporadaArchivada(\''+t.id+'\')">'+
+          '<div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between">'+
+            '<div>'+
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.04em;line-height:1">'+t.nombre+'</div>'+
+              '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(t.fechaFin||'')+'</div>'+
+            '</div>'+
+            '<div style="text-align:right">'+
+              '<div style="font-size:18px;font-weight:700;color:var(--dark)">'+nTP+'</div>'+
+              '<div style="font-size:10px;color:var(--muted)">partidos</div>'+
+              '<div style="font-size:11px;color:var(--grass);font-weight:700">'+bote+'\u20AC</div>'+
+            '</div>'+
+          '</div>'+
+          '<div id="arch-'+t.id+'" style="display:none;border-top:1px solid var(--border)">'+
+            (t.historial||[]).filter(function(h){return h.estado==='jugado';}).slice().reverse().map(function(h){
+              var col=h.scoreA>h.scoreB?'var(--grass)':h.scoreB>h.scoreA?'var(--red)':'var(--muted)';
+              return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid var(--border)">'+
+                '<span style="font-size:12px;color:var(--muted)">'+h.fecha+'</span>'+
+                '<span style="font-size:11px;color:var(--muted)">'+(h.tipo==='sala'?'F5':'F7')+'</span>'+
+                '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:'+col+'">'+h.scoreA+':'+h.scoreB+'</span>'+
+              '</div>';
+            }).join('')+
+          '</div>'+
+        '</div>';
+    });
+  }
+  el.innerHTML=html2;
+}
+
+function toggleTemporadaArchivada(tid){
+  var el=document.getElementById('arch-'+tid);
+  if(el) el.style.display=el.style.display==='none'?'':'none';
+}
+
+function archivarTemporada(){
+  var modal=document.getElementById('modal-archivar');
+  if(!modal){modal=document.createElement('div');modal.id='modal-archivar';modal.className='modal-bg';document.body.appendChild(modal);}
+  var nextLabel=_nextSeasonLabel(temporadaActual);
+  modal.innerHTML=
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<h2>\uD83C\uDFC6 Archivar Temporada '+temporadaActual+'</h2>'+
+    '<p class="msub">Guarda todos los partidos y estadísticas en el archivo. Los jugadores se mantienen pero sus stats se ponen a 0.</p>'+
+    '<div style="background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--red)">'+
+      '<i class="ti ti-alert-triangle"></i> Esta acción no se puede deshacer.'+
+    '</div>'+
+    '<div style="margin-bottom:12px">'+
+      '<div class="fl" style="margin-top:0">Nombre de la siguiente temporada</div>'+
+      '<input class="fi" type="text" id="nueva-temp-nombre" value="'+nextLabel+'" placeholder="ej: 26/27">'+
+    '</div>'+
+    '<button class="btn-green" style="width:100%;margin-bottom:8px" onclick="confirmarArchivarTemporada()"><i class="ti ti-archive"></i> Confirmar archivado</button>'+
+    '<button class="btn-outline" style="width:100%" onclick="closeModal(\'modal-archivar\')">Cancelar</button>'+
+    '</div>';
+  openModal('modal-archivar');
+}
+
+function _nextSeasonLabel(current){
+  var parts=current.split('/');
+  if(parts.length===2){var a=parseInt(parts[0]),b=parseInt(parts[1]);return (a+1)+'/'+(b+1);}
+  return '';
+}
+
+function confirmarArchivarTemporada(){
+  var nuevaNombre=(document.getElementById('nueva-temp-nombre')||{}).value||_nextSeasonLabel(temporadaActual);
+  var entry={
+    id:'temp_'+Date.now(),
+    nombre:temporadaActual,
+    fechaFin:new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}),
+    historial:historial.slice(),
+    cartera:JSON.parse(JSON.stringify(cartera)),
+    jugadores:JSON.parse(JSON.stringify(jugadores)),
+  };
+  temporadas.push(entry);
+  historial.length=0;
+  cartera={bote:0,partidos:[]};
+  convocatorias.length=0;
+  borradores.length=0;
+  pagos={};
+  Object.keys(jugadores).forEach(function(k){
+    jugadores[k].goles=0;jugadores[k].partidos=0;jugadores[k].ratings=jugadores[k].ratings||{};
+  });
+  temporadaActual=nuevaNombre;
+  closeModal('modal-archivar');
+  saveCloud();
+  showToast('\uD83C\uDFC6 Temporada '+entry.nombre+' archivada \u2014 Nueva temporada '+nuevaNombre);
+  renderTemporadas();
+  renderOrgPanel();
+  renderInicioMulti();
+  if(typeof renderCalendar==='function') renderCalendar();
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -7633,7 +8009,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
-      .then(function(reg){console.log('SW v3.2:',reg.scope);})
+      .then(function(reg){console.log('SW v4.0 - 12/06/2026 09:16:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
