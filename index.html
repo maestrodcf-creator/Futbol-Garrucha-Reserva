@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.1 - 12/06/2026 19:41 -->
+<!-- Peña Garrucha v4.2 - 12/06/2026 21:02 -->
 
 
 <html lang="es">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.1 - 12/06/2026 19:41</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:02</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -3647,8 +3647,9 @@ function renderDashboard(){
   const mediaAsistencia=totalPartidos?Math.round(jugados.reduce((s,h)=>s+((h.players||[]).filter(p=>p.rol==='tit').length),0)/totalPartidos*10)/10:0;
 
   // Top goleador
-  const topGoleador=Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0))[0];
-  const topAsistente=Object.values(jugadores).sort((a,b)=>(b.asistencias||0)-(a.asistencias||0))[0];
+  const _jvals=Object.values(jugadores).filter(j=>j&&j.name);
+  const topGoleador=_jvals.sort((a,b)=>(b.goles||0)-(a.goles||0))[0];
+  const topAsistente=null; // asistencias no registradas
   const topPartidos=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0))[0];
   const totalJugadores=Object.keys(jugadores).length;
 
@@ -3697,7 +3698,7 @@ function renderDashboard(){
   const chartAsistencia=svgBars(mesesArr.map(([k,v])=>({v:v.asistentes,label:labelMes(k)})),'#0C447C','Asistencia');
   const chartGoles=svgBars(mesesArr.map(([k,v])=>({v:v.goles,label:labelMes(k)})),'var(--amber)','Goles');
 
-  if(!totalPartidos&&!historial.length){
+  if(!totalPartidos){
     el.innerHTML=
       '<div style="background:var(--pitch);border-radius:var(--r-md);padding:24px;text-align:center;margin-bottom:16px">'+
         '<i class="ti ti-chart-bar" style="font-size:40px;color:rgba(184,246,58,.3);display:block;margin-bottom:12px"></i>'+
@@ -7579,10 +7580,7 @@ function renderJugadoresRanking(){
   '</div>';
   var sorted = Object.values(jugadores).filter(function(j){return j.name;}).sort(function(a,b){return (b[active]||0)-(a[active]||0);});
   var rows = sorted.map(function(j,i){
-    var av = getAvatar(j.name);
-    var avHtml = av.type==='emoji'
-      ? '<span style="font-size:22px">'+av.val+'</span>'
-      : '<div style="width:30px;height:30px;border-radius:50%;background:'+av.bg+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+av.fg+'">'+av.initials+'</div>';
+    var avHtml = renderAvatarCircle(j.name, 30, 11);
     var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="font-size:12px;color:var(--muted);font-weight:700">'+(i+1)+'</span>';
     return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">'+
       '<div style="width:24px;text-align:center">'+medal+'</div>'+
@@ -7670,35 +7668,7 @@ window.addEventListener('load',function(){
 </script>
 
 <!-- PIN OVERLAY -->
-<div id="pin-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
-  <div style="background:var(--card);border-radius:20px;padding:28px 24px 24px;width:calc(100% - 40px);max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-    <div style="width:52px;height:52px;border-radius:50%;background:var(--pitch);border:2px solid rgba(184,246,58,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
-      <i class="ti ti-lock" style="font-size:22px;color:var(--lime)"></i>
-    </div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;margin-bottom:4px">Panel Organizador</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Introduce el codigo de acceso</div>
-    <div style="display:flex;justify-content:center;gap:12px;margin-bottom:18px" id="pin-dots">
-      <div class="pin-dot" id="pd0"></div>
-      <div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div>
-      <div class="pin-dot" id="pd3"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
-      <button class="pin-key" onclick="pinKey('1')">1</button>
-      <button class="pin-key" onclick="pinKey('2')">2</button>
-      <button class="pin-key" onclick="pinKey('3')">3</button>
-      <button class="pin-key" onclick="pinKey('4')">4</button>
-      <button class="pin-key" onclick="pinKey('5')">5</button>
-      <button class="pin-key" onclick="pinKey('6')">6</button>
-      <button class="pin-key" onclick="pinKey('7')">7</button>
-      <button class="pin-key" onclick="pinKey('8')">8</button>
-      <button class="pin-key" onclick="pinKey('9')">9</button>
-      <button class="pin-key" onclick="pinKey('0')" style="grid-column:2">0</button>
-      <button class="pin-key" onclick="pinDel()" style="grid-column:3;font-size:18px;color:var(--muted)"><i class="ti ti-backspace"></i></button>
-    </div>
-    <div id="pin-err" style="font-size:12px;color:var(--rs);font-weight:600;min-height:18px;margin-bottom:8px"></div>
-    <button class="btn-outline" onclick="closePinOverlay()">Cancelar</button>
-  </div>
+
 </div>
 
 <!-- MODAL RESULTADO -->
@@ -8062,7 +8032,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.1 - 12/06/2026 19:41:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:02:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
