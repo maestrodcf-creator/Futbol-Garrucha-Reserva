@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.1 - 12/06/2026 19:36 -->
+<!-- Peña Garrucha v4.1 - 12/06/2026 19:41 -->
 
 
 <html lang="es">
@@ -659,7 +659,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     <!-- ─── HISTORIAL ─── -->
     <div id="sc-hist" class="screen">
       <div class="sec-pad" style="padding-top:16px">
-        <div id="hist-list"><div class="empty-st"><i class="ti ti-history"></i><p>Aún no hay partidos en el historial</p></div></div>
+        <div id="hist-list"></div>
         <div id="stats-sec" style="display:none;margin-top:16px">
           <div class="stitle">Estadísticas</div>
           <div class="metric-grid">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.1 - 12/06/2026 19:36</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.1 - 12/06/2026 19:41</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -1673,7 +1673,7 @@ function showScreen(id,btn){
   else pillEl.style.display='none';
   // lazy renders
   if(id==='partidos')renderPartidos();
-  if(id==='hist'){renderHistorialEnhanced();}
+  if(id==='hist'){recalcJugadoresFromHistorial();renderHistorialEnhanced();}
   if(id==='calendario')renderCalendar();
   if(id==='jugadores'){recalcJugadoresFromHistorial();renderJugadoresEnhanced();}
 }
@@ -3697,7 +3697,7 @@ function renderDashboard(){
   const chartAsistencia=svgBars(mesesArr.map(([k,v])=>({v:v.asistentes,label:labelMes(k)})),'#0C447C','Asistencia');
   const chartGoles=svgBars(mesesArr.map(([k,v])=>({v:v.goles,label:labelMes(k)})),'var(--amber)','Goles');
 
-  if(!totalPartidos){
+  if(!totalPartidos&&!historial.length){
     el.innerHTML=
       '<div style="background:var(--pitch);border-radius:var(--r-md);padding:24px;text-align:center;margin-bottom:16px">'+
         '<i class="ti ti-chart-bar" style="font-size:40px;color:rgba(184,246,58,.3);display:block;margin-bottom:12px"></i>'+
@@ -7653,6 +7653,14 @@ window.addEventListener('load',function(){
     startTimerTick();
     startRealtime();
     hideSplash();
+    // Re-render after a short delay to catch any timing issues
+    setTimeout(function(){
+      recalcJugadoresFromHistorial();
+      renderHistorialEnhanced();
+      renderDashboard();
+      renderJugadoresRanking();
+      renderJugadoresEnhanced();
+    }, 500);
   }).catch(function(e){
     console.error('loadCloud error:',e);
     hideSplash();
@@ -8054,7 +8062,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.1 - 12/06/2026 19:36:',reg.scope);})
+      .then(function(reg){console.log('SW v4.1 - 12/06/2026 19:41:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
