@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.0 - 12/06/2026 13:47 -->
+<!-- Peña Garrucha v4.0 - 12/06/2026 13:53 -->
 
 
 <html lang="es">
@@ -638,17 +638,14 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
     <!-- ─── JUGADORES ─── -->
     <div id="sc-jugadores" class="screen">
-      <div style="padding:10px 16px 0;display:flex;justify-content:flex-end">
-        <button onclick="abrirAvatarEditor()" style="border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);cursor:pointer;padding:7px 14px;font-size:12px;font-weight:700;color:var(--grass);display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif"><i class="ti ti-user-edit" style="font-size:14px"></i> Editar mi avatar</button>
+      <!-- Avatar edit -->
+      <div style="padding:10px 16px 0;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:12px;color:var(--muted)">Pulsa un jugador para ver su carta FIFA</div>
+        <button onclick="abrirAvatarEditor()" style="border:1px solid var(--grass);background:rgba(34,136,61,.08);border-radius:var(--r-sm);cursor:pointer;padding:5px 12px;font-size:11px;font-weight:700;color:var(--grass);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-user-edit" style="font-size:12px"></i> Mi avatar</button>
       </div>
+      <!-- Player cards grid -->
       <div class="sec-pad" style="padding-top:10px">
-        <div id="jugadores-list">
-          <div class="empty-st"><i class="ti ti-users"></i><span class="emph">Sin jugadores registrados</span><p>Los jugadores aparecerán aquí cuando se inscriban en una convocatoria.</p></div>
-        </div>
-      </div>
-      <!-- FIFA panel -->
-      <div id="jug-panel-fifa" class="sec-pad" style="display:none;padding-top:14px">
-        <div id="jugadores-fifa-list"></div>
+        <div id="jugadores-list"></div>
       </div>
     </div>
 
@@ -690,7 +687,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.0 - 12/06/2026 13:47</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.0 - 12/06/2026 13:53</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -781,6 +778,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   <div id="sc-dashboard" class="screen">
       <div class="sec-pad" style="padding-top:16px">
         <div id="dashboard-content"></div>
+        <div id="ranking-content" style="margin-top:16px"></div>
       </div>
     </div>
 
@@ -1670,7 +1668,7 @@ function showScreen(id,btn){
   if(id==='partidos')renderPartidos();
   if(id==='hist')renderHistorial();
   if(id==='calendario')renderCalendar();
-  if(id==='jugadores')renderJugadores();
+  if(id==='jugadores'){renderJugadoresEnhanced();}
 }
 
 function setPill(state){
@@ -1857,7 +1855,7 @@ function patchShowScreen(){
     if(id==='avatar'){renderAvatarEditor();}
     if(id==='editar-conv'){/* content already rendered by abrirEditarConvScreen */}
     if(id==='hist')renderHistorialEnhanced();
-    if(id==='dashboard')renderDashboard();
+    if(id==='dashboard'){renderDashboard();renderJugadoresRanking();}
     if(id==='inicio')renderInicioMulti();
   };
 }
@@ -2790,55 +2788,50 @@ const JCOLORS=['#22883d','#0C447C','#633806','#A32D2D','#3C3489','#085041','#7B6
 function jColor(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))&0xffffffff;return JCOLORS[Math.abs(h)%JCOLORS.length];}
 function ini2(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function renderJugadoresEnhanced(){
-  const el=document.getElementById('jugadores-list');if(!el)return;
-  const keys=Object.keys(jugadores);
+  var el = document.getElementById('jugadores-list');
+  if(!el) return;
+  var keys = Object.keys(jugadores);
   if(!keys.length){
     el.innerHTML='<div class="empty-st"><i class="ti ti-users"></i><strong>Sin jugadores</strong><p>Aparecen al cerrar el primer partido</p></div>';
     return;
   }
-  el.innerHTML=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0)).map(function(j){
-    const pp=Object.entries(j.posiciones||{}).sort(function(a,b){return b[1]-a[1];})[0];
-    const racha=j.racha||0;
-    const rh=racha>=2?
-      '<span style="background:#FFF0DC;color:#C05E00;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+racha+' racha</span>':
-      racha<=-2?
-      '<span style="background:#E6F1FB;color:#0C447C;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;margin-left:6px">'+Math.abs(racha)+' der.</span>':'';
-    var avHtml=buildAvatarToken(j.name);
-    var safeName=j.name.replace(/"/g,'&quot;');
-    return '<div class="card" style="margin-bottom:10px;cursor:pointer" data-jname="'+safeName+'" onclick="abrirPerfil(this.dataset.jname)">'+
-      '<div style="padding:12px 14px;display:flex;align-items:center;gap:11px">'+
-        avHtml+
-        '<div style="flex:1">'+
-          '<div style="font-weight:700;font-size:14px">'+j.name+rh+insigniasPills(j.name)+'</div>'+
-          '<div style="font-size:11px;color:var(--muted);margin-top:1px">'+
-            (pp&&posLabels?posLabels[pp[0]]||pp[0]:'Sin posicion')+
-            ' &middot; '+(j.partidos||0)+' partidos &middot; '+(j.ganados||0)+'V '+(j.empatados||0)+'E '+(j.perdidos||0)+'D'+
+  var sorted = Object.values(jugadores).sort(function(a,b){return (b.partidos||0)-(a.partidos||0);});
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">'+
+    sorted.map(function(j){
+      var k = j.name.trim().toLowerCase();
+      var rats = (jugadores[k]||{}).ratings||{};
+      var med = getRatingMedia(rats);
+      var mc = med>=85?'#FFD700':med>=75?'#5cb85c':med>=60?'#5bc0de':'#aaa';
+      var av = getAvatar(j.name);
+      var avHtml = av.type==='emoji'
+        ? '<div style="font-size:40px;line-height:1;margin-bottom:6px">'+av.val+'</div>'
+        : '<div style="width:56px;height:56px;border-radius:50%;background:'+av.bg+';display:flex;align-items:center;justify-content:center;font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:'+av.fg+';margin:0 auto 6px">'+av.initials+'</div>';
+      var posPrincipal = Object.entries(j.posiciones||{}).sort(function(a,b){return b[1]-a[1];})[0];
+      var posLabel = posPrincipal&&posLabels?posLabels[posPrincipal[0]]||posPrincipal[0]:'—';
+      var posAbrev = posLabel==='Portero'?'POR':posLabel==='Defensa'?'DEF':posLabel==='Delantero'?'DEL':'MED';
+      var FC4=[{key:'ritmo',l:'RIT'},{key:'disparo',l:'DIS'},{key:'defensa',l:'DEF'},{key:'fisico',l:'FIS'}];
+      var bars = FC4.map(function(c){
+        var v=rats[c.key]||50;
+        var col=v>=85?'#FFD700':v>=75?'#5cb85c':v>=60?'#5bc0de':'#aaa';
+        return '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px">'+
+          '<span style="font-size:8px;color:rgba(255,255,255,.4);width:18px">'+c.l+'</span>'+
+          '<span style="font-size:9px;font-weight:700;color:'+col+';width:16px;text-align:right">'+v+'</span>'+
+          '<div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px">'+
+            '<div style="height:100%;width:'+v+'%;background:'+col+';border-radius:2px"></div>'+
           '</div>'+
-        '</div>'+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border)">'+
-        ['goles','amarillas','rojas'].map(function(f,fi){
-          return '<div style="padding:9px 8px;text-align:center;'+(fi<2?'border-right:1px solid var(--border)':'')+'">' +
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:'+(['var(--grass)','#B8860B','var(--red)'][fi])+'">'+( j[f]||0)+'</div>'+
-            '<div style="font-size:9px;color:var(--muted);text-transform:uppercase">'+(['Goles','Amarillas','Rojas'][fi])+'</div>'+
-          '</div>';
-        }).join('')+
-      '</div>'+
-      '<div style="padding:8px 14px 10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'+
-        '<div style="font-size:11px;color:var(--muted)">Media FIFA</div>'+
-        '<button class="jug-card-btn" data-jname="'+safeName+'" style="border:1px solid rgba(184,246,58,.2);background:rgba(184,246,58,.05);border-radius:8px;cursor:pointer;padding:5px 12px;font-size:11px;font-weight:700;color:var(--lime);font-family:DM Sans,sans-serif">⚽ Ver carta FIFA</button>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  // Wire FIFA card buttons via delegation
-  var jList = document.getElementById('jugadores-list');
-  if(jList && !jList._fifaWired){
-    jList._fifaWired = true;
-    jList.addEventListener('click', function(e){
-      var btn = e.target.closest('.jug-card-btn');
-      if(btn){ e.stopPropagation(); abrirFifaCard(btn.getAttribute('data-jname')); }
-    });
-  }
+        '</div>';
+      }).join('');
+      var safe = j.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<div onclick="abrirPerfil(\''+safe+'\')" style="background:linear-gradient(160deg,#1a2e1a,#0d1f0d);border:1px solid rgba(184,246,58,.15);border-radius:12px;padding:12px 10px;cursor:pointer;text-align:center;position:relative">'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(184,246,58,.4);margin-bottom:4px">'+posAbrev+'</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:40px;color:'+mc+';line-height:1;margin-bottom:2px">'+med+'</div>'+
+        avHtml+
+        '<div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+j.name+'</div>'+
+        bars+
+        '<div style="margin-top:8px;font-size:9px;color:rgba(255,255,255,.3)">'+(j.partidos||0)+' partidos &middot; '+(j.goles||0)+' goles</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
 }
 
 /* ===== RANKING ===== */
@@ -7694,6 +7687,48 @@ function renderFifaList(){
   '</div>';
 }
 
+function renderJugadoresRanking(){
+  var el = document.getElementById('ranking-content');
+  if(!el) return;
+  var keys = Object.keys(jugadores);
+  if(!keys.length){ el.innerHTML=''; return; }
+  var tabs = [{key:'goles',label:'Goles'},{key:'partidos',label:'Partidos'},{key:'ganados',label:'Victorias'}];
+  var active = el.getAttribute('data-tab')||'goles';
+  var tabHtml = '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+    tabs.map(function(t){
+      var sel = t.key===active;
+      return '<button class="jrb" data-rk="'+t.key+'" style="border:1px solid '+(sel?'var(--grass)':'var(--border)')+';background:'+(sel?'rgba(34,136,61,.12)':'none')+';border-radius:99px;padding:5px 14px;font-size:11px;font-weight:700;color:'+(sel?'var(--grass)':'var(--muted)')+';cursor:pointer;font-family:DM Sans,sans-serif">'+t.label+'</button>';
+    }).join('')+
+  '</div>';
+  var sorted = Object.values(jugadores).sort(function(a,b){return (b[active]||0)-(a[active]||0);}).slice(0,10);
+  var rows = sorted.map(function(j,i){
+    var av = getAvatar(j.name);
+    var avHtml = av.type==='emoji'
+      ? '<span style="font-size:22px">'+av.val+'</span>'
+      : '<div style="width:30px;height:30px;border-radius:50%;background:'+av.bg+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+av.fg+'">'+av.initials+'</div>';
+    var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="font-size:12px;color:var(--muted);font-weight:700">'+(i+1)+'</span>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">'+
+      '<div style="width:24px;text-align:center">'+medal+'</div>'+
+      avHtml+
+      '<div style="flex:1;font-size:13px;font-weight:600;color:var(--dark)">'+j.name+'</div>'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime)">'+(j[active]||0)+'</div>'+
+    '</div>';
+  }).join('');
+  el.setAttribute('data-tab', active);
+  el.innerHTML = '<div class="sec-label" style="margin-bottom:8px"><i class="ti ti-trophy" style="font-size:13px"></i> Clasificación</div>'+
+    '<div class="card" style="overflow:hidden">'+
+      '<div style="padding:12px 14px 8px">'+tabHtml+'</div>'+
+      rows+
+    '</div>';
+
+  // Wire ranking tab buttons
+  var rc=document.getElementById('ranking-content');
+  if(rc)rc.addEventListener('click',function(e){var b=e.target.closest('.jrb');if(b){rc.setAttribute('data-tab',b.getAttribute('data-rk'));renderJugadoresRanking();}});
+}
+
+
+function jugRankTab(key){ var el=document.getElementById('ranking-content'); if(el){el.setAttribute('data-tab',key);renderJugadoresRanking();}}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -8139,7 +8174,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js')
-      .then(function(reg){console.log('SW v4.0 - 12/06/2026 13:47:',reg.scope);})
+      .then(function(reg){console.log('SW v4.0 - 12/06/2026 13:53:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
