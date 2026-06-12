@@ -549,7 +549,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <!-- 2. Botón: Próximas convocatorias -->
         <div id="proximas-section"></div>
 
-        <!-- 3. Botón: Partidos de la temporada -->
+        <!-- 3. Botón: Bote -->
+        <div id="btn-bote-inicio"></div>
+
+        <!-- 4. Botón: Partidos de la temporada -->
         <div id="btn-temporada-inicio"></div>
 
       </div>
@@ -2004,7 +2007,29 @@ function _renderInicioButtons(){
       prox.innerHTML='';
     }
   }
-  // 2. Temporada button
+  // 2. Bote button
+  var boteWrap=document.getElementById('btn-bote-inicio');
+  if(boteWrap){
+    var boteTotal=(cartera.bote||0);
+    var nPart=(cartera.partidos||[]).length;
+    boteWrap.innerHTML=
+      '<button onclick="toggleBoteDetalle()" id="btn-bote-toggle" '+
+        'style="width:100%;display:flex;align-items:center;justify-content:space-between;'+
+        'background:var(--pitch);border:1px solid rgba(184,246,58,.2);border-radius:var(--r-md);'+
+        'padding:14px 16px;cursor:pointer;margin-top:8px;font-family:\'DM Sans\',sans-serif">'+
+        '<div style="display:flex;align-items:center;gap:12px">'+
+          '<span style="font-size:28px">\uD83D\uDCB0</span>'+
+          '<div style="text-align:left">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.04em;line-height:1">'+boteTotal.toFixed(2)+'\u20AC</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">Bote acumulado \u00B7 '+nPart+' partido'+(nPart!==1?'s':'')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<i class="ti ti-chevron-down" id="icon-bote" style="font-size:18px;color:var(--muted);transition:transform .2s"></i>'+
+      '</button>'+
+      '<div id="bote-detalle" style="display:none;margin-top:4px"></div>';
+  }
+
+  // 3. Temporada button
   var tempWrap=document.getElementById('btn-temporada-inicio');
   if(tempWrap){
     var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
@@ -7152,6 +7177,59 @@ function renderCartera(){
       abrirDetallePartido(hid);
     });
   });
+}
+
+function toggleBoteDetalle(){
+  var det=document.getElementById('bote-detalle');
+  var icon=document.getElementById('icon-bote');
+  if(!det) return;
+  var open=det.style.display!=='none';
+  det.style.display=open?'none':'';
+  if(icon) icon.style.transform=open?'':'rotate(180deg)';
+  if(!open){
+    sbLoad('cartera').then(function(ct){ if(ct&&typeof ct.bote==='number')cartera=ct; renderBoteResumen(det); }).catch(function(){ renderBoteResumen(det); });
+  }
+}
+
+function renderBoteResumen(el){
+  var partidos=(cartera.partidos||[]).slice().sort(function(a,b){
+    var pa=a.fecha?a.fecha.split('/').reverse().join(''):'';
+    var pb=b.fecha?b.fecha.split('/').reverse().join(''):'';
+    return pa.localeCompare(pb);
+  });
+  var boteTotal=cartera.bote||0;
+  if(!partidos.length){
+    el.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;text-align:center;font-size:12px;color:var(--muted)">Sin partidos registrados a\u00FAn</div>';
+    return;
+  }
+  var rows=partidos.map(function(p){
+    var tipoShort=p.tipo==='sala'?'F5':'F7';
+    var boteColor=p.botePartido>0?'var(--grass)':'var(--muted)';
+    var boteStr=typeof p.botePartido==='number'?(p.botePartido>=0?'+':'')+p.botePartido.toFixed(1)+'\u20AC':'\u2014';
+    var isPrevio=p.previo===true;
+    var nJug=p.nJugadores!=='?'?p.nJugadores+' jug.':'\u2014';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border)">'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(34,136,61,.1);color:var(--grass)">'+tipoShort+'</span>'+
+        '<div>'+
+          '<div style="font-size:12px;font-weight:700;color:var(--dark)">'+p.fecha+'</div>'+
+          '<div style="font-size:10px;color:var(--muted)">'+nJug+(isPrevio?' \u00B7 antes de la app':'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:14px;font-weight:700;color:'+boteColor+'">'+boteStr+'</div>'+
+        '<div style="font-size:10px;color:var(--muted)">al bote</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="card" style="overflow:hidden;margin-bottom:8px">'+
+      rows+
+      '<div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:rgba(34,136,61,.06)">'+
+        '<span style="font-size:12px;font-weight:700;color:var(--dark)">Total acumulado</span>'+
+        '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--grass)">'+boteTotal.toFixed(2)+'\u20AC</span>'+
+      '</div>'+
+    '</div>';
 }
 
 /* ===== CSS ===== */
