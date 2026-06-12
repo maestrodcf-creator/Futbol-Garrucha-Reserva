@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.1 - 12/06/2026 14:14 -->
+<!-- Peña Garrucha v4.1 - 12/06/2026 19:04 -->
 
 
 <html lang="es">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.1 - 12/06/2026 14:14</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.1 - 12/06/2026 19:04</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -3510,257 +3510,125 @@ function renderPerfil(j){
   const el=document.getElementById('perfil-content');
   if(!el)return;
 
-  // ── Stats globales ──────────────────────────────────────────────────
   const partidos=j.partidos||0;
   const ganados=j.ganados||0;
   const perdidos=j.perdidos||0;
   const empatados=j.empatados||0;
   const pct=partidos>0?Math.round(ganados/partidos*100):0;
-  const racha=j.racha||0;
   const goles=j.goles||0;
-  const asist=j.asistencias||0;
   const am=j.amarillas||0;
   const ro=j.rojas||0;
+  const racha=j.racha||0;
   const posPrincipal=Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1])[0];
   const posNombre=posPrincipal&&posLabels?posLabels[posPrincipal[0]]||posPrincipal[0]:'—';
-
-  // ── Media del grupo ─────────────────────────────────────────────────
   const todos=Object.values(jugadores).filter(x=>x.partidos>0);
-  const mediaGoles=todos.length?Math.round((todos.reduce((s,x)=>s+(x.goles||0),0)/todos.length)*10)/10:0;
-  const mediaPartidos=todos.length?Math.round((todos.reduce((s,x)=>s+(x.partidos||0),0)/todos.length)*10)/10:0;
-  const mediaAsist=todos.length?Math.round((todos.reduce((s,x)=>s+(x.asistencias||0),0)/todos.length)*10)/10:0;
+  const rankGoles=todos.filter(x=>(x.goles||0)>(goles||0)).length+1;
+  const rankPartidos=todos.filter(x=>(x.partidos||0)>(partidos||0)).length+1;
 
-  // ── Ranking posición ────────────────────────────────────────────────
-  const rankGoles=[...todos].sort((a,b)=>(b.goles||0)-(a.goles||0)).findIndex(x=>x.name===j.name)+1;
-  const rankPartidos=[...todos].sort((a,b)=>(b.partidos||0)-(a.partidos||0)).findIndex(x=>x.name===j.name)+1;
-
-  // ── Evolución mensual desde historial ──────────────────────────────
-  // historial entries have: fecha (DD/MM/YYYY), statsJugadores{name:{goles,asistencias,...}}, players[]
-  const mesesMap={};
-  historial.filter(h=>h.estado==='jugado').forEach(h=>{
-    const tit=(h.players||[]).filter(p=>p.rol==='tit');
-    const jugoComo=tit.find(p=>p.name.trim().toLowerCase()===j.name.trim().toLowerCase());
-    if(!jugoComo)return;
-    // Parse fecha DD/MM/YYYY
-    let mes='';
-    if(h.fecha){
-      const parts=h.fecha.split('/');
-      if(parts.length===3)mes=parts[2]+'-'+parts[1].padStart(2,'0'); // YYYY-MM
-    }
-    if(!mes)mes='Sin fecha';
-    if(!mesesMap[mes])mesesMap[mes]={mes,partidos:0,goles:0,asistencias:0,victorias:0};
-    mesesMap[mes].partidos++;
-    const stats=h.statsJugadores&&h.statsJugadores[j.name];
-    if(stats){
-      mesesMap[mes].goles+=stats.goles||0;
-      mesesMap[mes].asistencias+=stats.asistencias||0;
-    }
-    // Check if won
-    const sc=h.scoreA!==undefined?{a:h.scoreA,b:h.scoreB}:{a:0,b:0};
-    const eqA=h.teamA||[];const eqB=h.teamB||[];
-    const inA=eqA.includes(j.name);const inB=eqB.includes(j.name);
-    const ganador=sc.a>sc.b?'A':sc.b>sc.a?'B':'empate';
-    if((ganador==='A'&&inA)||(ganador==='B'&&inB))mesesMap[mes].victorias++;
-  });
-  const mesesArr=Object.values(mesesMap).sort((a,b)=>a.mes.localeCompare(b.mes));
-  const MESES_CORTOS={
-    '01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
-    '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'
-  };
-  function labelMes(m){
-    if(!m||m==='Sin fecha')return m;
-    const [y,mm]=m.split('-');
-    return (MESES_CORTOS[mm]||mm)+' '+y.slice(2);
-  }
-
-  // ── Mini bar chart SVG ──────────────────────────────────────────────
-  function barChart(data,colorFn,maxVal){
-    if(!data.length)return '<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin datos de partidos todavia</div>';
-    const W=320,H=80,barW=Math.min(32,Math.floor((W-20)/data.length)-4),gap=Math.floor((W-20)/data.length);
-    const maxV=maxVal||Math.max(...data.map(d=>d.v),1);
-    const bars=data.map((d,i)=>{
-      const bh=maxV>0?Math.round((d.v/maxV)*(H-24)):0;
-      const x=10+i*gap+Math.floor((gap-barW)/2);
-      const y=H-20-bh;
-      const col=colorFn(d,i);
-      return '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(2,bh)+'" rx="3" fill="'+col+'"/>'+
-        '<text x="'+(x+barW/2)+'" y="'+(H-5)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="DM Sans,sans-serif">'+d.label+'</text>'+
-        (d.v>0?'<text x="'+(x+barW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+col+'" font-family="DM Sans,sans-serif">'+d.v+'</text>':'');
-    }).join('');
-    return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+bars+'</svg>';
-  }
-
-  const chartGoles=barChart(
-    mesesArr.map(m=>({v:m.goles,label:labelMes(m.mes)})),
-    ()=>'var(--grass)',0
-  );
-  const chartPartidos=barChart(
-    mesesArr.map(m=>({v:m.partidos,label:labelMes(m.mes)})),
-    (d)=>d.v>0?'var(--blue)':'rgba(0,0,0,.1)',0
-  );
-
-  // ── Racha display ───────────────────────────────────────────────────
-  const rachaColor=racha>=3?'var(--grass)':racha<=-3?'var(--red)':'var(--amber)';
-  const rachaLabel=racha>=3?'Racha ganadora':racha<=-3?'Racha perdedora':racha===0?'Sin racha':'Forma irregular';
-  const rachaIco=racha>=3?'ti-trending-up':racha<=-3?'ti-trending-down':'ti-minus';
-
-  el.innerHTML=
-    // Back button
-    '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))" '+
-      'style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:\'DM Sans\',sans-serif">'+
-      '<i class="ti ti-arrow-left" style="font-size:16px"></i> Jugadores</button>'+
-
-    // ── Hero card ──────────────────────────────────────────────────────
-    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:18px 18px 16px;margin-bottom:14px;display:flex;align-items:center;gap:16px">'+
-      '<div style="position:relative;cursor:pointer;display:inline-block" class="av-edit-wrap" data-avname="'+j.name+'">'+
-        '+buildAvatarTokenPerfil(j.name)+'
-        '<div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-radius:50%;background:var(--grass);display:flex;align-items:center;justify-content:center;border:2px solid var(--pitch)">'+
-          '<i class="ti ti-pencil" style="font-size:10px;color:#fff"></i>'+
-        '</div>'+
-      '</div>'+
-      '<div style="flex:1">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--lime);letter-spacing:.04em;line-height:1">'+j.name+'</div>'+
-        '<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px">'+posNombre+
-          ' &middot; <span style="color:rgba(184,246,58,.6)">#'+rankGoles+' goleador</span>'+
-          ' &middot; <span style="color:rgba(184,246,58,.6)">#'+rankPartidos+' asistencia</span>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-
-    // ── Stats grid ────────────────────────────────────────────────────
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
-      [
-        {v:partidos,l:'Partidos',c:'var(--dark)'},
-        {v:pct+'%',l:'% Victorias',c:'var(--grass)'},
-        {v:goles,l:'Goles',c:'var(--grass)'},
-        {v:asist,l:'Asistencias',c:'#0C447C'},
-      ].map(s=>
-        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 8px;text-align:center">'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;line-height:1;color:'+s.c+'">'+s.v+'</div>'+
-          '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">'+s.l+'</div>'+
-        '</div>'
-      ).join('')+
-    '</div>'+
-
-    // ── Racha ─────────────────────────────────────────────────────────
-    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">'+
-      '<div style="width:38px;height:38px;border-radius:50%;background:'+rachaColor+';opacity:.15;position:absolute"></div>'+
-      '<div style="width:38px;height:38px;border-radius:var(--r-sm);background:rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-        '<i class="ti '+rachaIco+'" style="font-size:20px;color:'+rachaColor+'"></i>'+
-      '</div>'+
-      '<div style="flex:1">'+
-        '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+rachaLabel+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+
-          ganados+'V &middot; '+empatados+'E &middot; '+perdidos+'D'+
-          (am>0||ro>0?' &middot; '+(am>0?am+' amarilla'+(am>1?'s':''):'')+(am>0&&ro>0?' &middot; ':''+(ro>0?ro+' roja'+(ro>1?'s':''):'')):'')+
-        '</div>'+
-      '</div>'+
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:'+rachaColor+'">'+
-        (racha>0?'+':'')+racha+
-      '</div>'+
-    '</div>'+
-
-    // ── Insignias
-    insigniasCards(j.name)+
-
-    // ── Comparativa con el grupo ──────────────────────────────────────
-    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Comparativa con el grupo</div>'+
-      [
-        {label:'Goles',mio:goles,media:mediaGoles,icon:'ti-ball-football',color:'var(--grass)'},
-        {label:'Asistencias',mio:asist,media:mediaAsist,icon:'ti-boot-2',color:'#0C447C'},
-        {label:'Partidos',mio:partidos,media:mediaPartidos,icon:'ti-calendar',color:'var(--amber)'},
-      ].map(row=>{
-        const pctMio=row.media>0?Math.min(100,Math.round(row.mio/Math.max(row.mio,row.media)*100)):row.mio>0?100:0;
-        const pctMedia=row.media>0?Math.min(100,Math.round(row.media/Math.max(row.mio,row.media)*100)):0;
-        const mejor=row.mio>=row.media;
-        return '<div style="margin-bottom:10px">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
-            '<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--dark)">'+
-              '<i class="ti '+row.icon+'" style="font-size:13px;color:'+row.color+'"></i> '+row.label+
-            '</div>'+
-            '<div style="font-size:11px;color:var(--muted)">'+
-              '<span style="font-weight:700;color:'+(mejor?'var(--grass)':'var(--dark)')+'">'+row.mio+'</span>'+
-              ' vs '+row.media+' media'+
-            '</div>'+
-          '</div>'+
-          '<div style="position:relative;height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:2px">'+
-            '<div style="position:absolute;inset:0;height:100%;border-radius:99px;background:rgba(0,0,0,.08);width:'+pctMedia+'%"></div>'+
-            '<div style="position:absolute;inset:0;height:100%;border-radius:99px;background:'+row.color+';width:'+pctMio+'%"></div>'+
-          '</div>'+
-          '<div style="font-size:9px;color:var(--muted);text-align:right">media grupo: '+row.media+'</div>'+
-        '</div>';
-      }).join('')+
-    '</div>'+
-
-    // ── Evolución mensual ─────────────────────────────────────────────
-    (mesesArr.length?
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Goles por mes</div>'+
-        chartGoles+
-      '</div>'+
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Partidos por mes</div>'+
-        chartPartidos+
-      '</div>':
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px">'+
-        '<i class="ti ti-chart-bar" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4"></i>'+
-        'La evolucion mensual aparecera cuando se cierren partidos con estadisticas'+
-      '</div>'
-    )+
-
-    // ── Posiciones jugadas ────────────────────────────────────────────
-    (posPrincipal?
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">Posiciones jugadas</div>'+
-        '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
-          Object.entries(j.posiciones||{}).sort((a,b)=>b[1]-a[1]).map(([pos,n])=>{
-            const total=Object.values(j.posiciones||{}).reduce((s,x)=>s+x,0);
-            const pctP=total>0?Math.round(n/total*100):0;
-            return '<div style="display:flex;align-items:center;gap:6px;background:var(--offwhite);border-radius:99px;padding:5px 12px">'+
-              '<span style="font-weight:700;font-size:12px;color:var(--dark)">'+(posLabels&&posLabels[pos]||pos)+'</span>'+
-              '<span style="font-size:11px;color:var(--muted)">'+n+'x &middot; '+pctP+'%</span>'+
-            '</div>';
-          }).join('')+
-        '</div>'+
-      '</div>':'') +
-
-    // Back bottom
-    '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))" '+
-      'style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:11px;border:1px solid var(--border2);border-radius:var(--r-sm);background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);font-family:\'DM Sans\',sans-serif;margin-top:4px">'+
-      '</div>';  // close FIFA section placeholder
-
-  // Build FIFA section separately and append
-  var k3=j.name.trim().toLowerCase();
-  var rats3=(jugadores[k3]||{}).ratings||{};
-  var FC3=[{key:'ritmo',l:'Ritmo'},{key:'disparo',l:'Disparo'},{key:'pase',l:'Pase'},{key:'regate',l:'Regate'},{key:'defensa',l:'Defensa'},{key:'fisico',l:'Fisico'},{key:'liderazgo',l:'Liderazgo'},{key:'porteria',l:'Porteria'}];
-  var med3=getRatingMedia(rats3);
-  var mc3=med3>=85?'#FFD700':med3>=75?'#5cb85c':med3>=60?'#5bc0de':'#aaa';
-  var bars3=FC3.map(function(c){
-    var v=rats3[c.key]||50;
-    var col=v>=85?'#FFD700':v>=75?'#5cb85c':v>=60?'#5bc0de':'#aaa';
-    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
-      '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);width:68px;text-align:right">'+c.l.toUpperCase()+'</span>'+
-      '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;color:'+col+';width:24px;text-align:center">'+v+'</span>'+
-      '<div style="flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px">'+
-        '<div style="height:100%;width:'+v+'%;background:'+col+';border-radius:3px"></div>'+
-      '</div>'+
-    '</div>';
+  // Build FIFA bars
+  const k3=j.name.trim().toLowerCase();
+  const rats=(jugadores[k3]||{}).ratings||{};
+  const FC=[
+    {key:'ritmo',l:'Ritmo'},{key:'disparo',l:'Disparo'},{key:'pase',l:'Pase'},
+    {key:'regate',l:'Regate'},{key:'defensa',l:'Defensa'},{key:'fisico',l:'Físico'},
+    {key:'liderazgo',l:'Liderazgo'},{key:'porteria',l:'Portería'}
+  ];
+  const med=getRatingMedia(rats);
+  const mc=med>=85?'#FFD700':med>=75?'#5cb85c':med>=60?'#5bc0de':'#aaa';
+  const bars=FC.map(c=>{
+    const v=rats[c.key]||50;
+    const col=v>=85?'#FFD700':v>=75?'#5cb85c':v>=60?'#5bc0de':'#aaa';
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);width:68px;text-align:right">${c.l.toUpperCase()}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:${col};width:24px;text-align:center">${v}</span>
+      <div style="flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px">
+        <div style="height:100%;width:${v}%;background:${col};border-radius:3px"></div>
+      </div>
+    </div>`;
   }).join('');
 
-  el.innerHTML +=
-    '<div class="sec-label" style="margin-bottom:8px;margin-top:6px"><i class="ti ti-id-badge" style="font-size:13px"></i> Carta FIFA</div>'+
-    '<div class="card" style="background:linear-gradient(160deg,#1a2a1a,#0d1f0d);border:1px solid rgba(184,246,58,.15);padding:14px 16px;margin-bottom:14px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-        '<div>'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:'+mc3+';line-height:1">'+med3+'</div>'+
-          '<div style="font-size:10px;color:rgba(184,246,58,.5);letter-spacing:.08em">MEDIA GENERAL</div>'+
-        '</div>'+
-        '<div style="text-align:right;font-size:10px;color:rgba(184,246,58,.3);font-weight:700;letter-spacing:.1em">PEÑA GARRUCHA</div>'+
-      '</div>'+
-      bars3+
-    '</div>'+
-    '<i class="ti ti-arrow-left" style="font-size:14px"></i> Volver a jugadores</button>';
+  el.innerHTML=`
+    <button onclick="showScreen('jugadores',document.querySelector('[data-screen=jugadores]'))"
+      style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:'DM Sans',sans-serif">
+      <i class="ti ti-arrow-left" style="font-size:16px"></i> Jugadores
+    </button>
+
+    <!-- Hero card -->
+    <div style="background:var(--pitch);border-radius:var(--r-md);padding:18px;margin-bottom:14px;display:flex;align-items:center;gap:16px">
+      <div class="av-edit-wrap" data-avname="${j.name}"
+        style="position:relative;cursor:pointer;display:inline-block"
+        title="Cambiar avatar">
+        ${renderAvatarCircle(j.name,72,26)}
+        <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;border-radius:50%;background:var(--grass);display:flex;align-items:center;justify-content:center;border:2px solid var(--pitch)">
+          <i class="ti ti-pencil" style="font-size:10px;color:#fff"></i>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--lime);letter-spacing:.04em;line-height:1">${j.name}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px">
+          ${posNombre}
+          &middot; <span style="color:rgba(184,246,58,.6)">#${rankGoles} goleador</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px">
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--lime)">${partidos}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Partidos</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--grass)">${goles}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Goles</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--grass)">${ganados}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Victorias</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--dark)">${pct}%</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">% Victorias</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#B8860B">${am}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Amarillas</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red)">${ro}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Rojas</div>
+      </div>
+    </div>
+
+    <!-- FIFA Card -->
+    <div class="sec-label" style="margin-bottom:8px"><i class="ti ti-id-badge" style="font-size:13px"></i> Carta FIFA</div>
+    <div style="background:linear-gradient(160deg,#1a2a1a,#0d1f0d);border:1px solid rgba(184,246,58,.15);border-radius:var(--r-md);padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:${mc};line-height:1">${med}</div>
+          <div style="font-size:10px;color:rgba(184,246,58,.5);letter-spacing:.08em">MEDIA GENERAL</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:rgba(184,246,58,.3);font-weight:700;letter-spacing:.1em">PEÑA GARRUCHA</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">${posNombre}</div>
+        </div>
+      </div>
+      ${bars}
+    </div>
+
+    <!-- Edit FIFA button (org only via PIN) -->
+    <button onclick="editarFifaCard('${j.name.replace(/'/g,"\\'")}')"
+      style="width:100%;border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.05);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;color:var(--lime);cursor:pointer;margin-bottom:8px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px">
+      <i class="ti ti-pencil" style="font-size:13px"></i> Editar valoraciones FIFA
+    </button>
+  `;
+
+  // Wire avatar click
+  const wrap=el.querySelector('.av-edit-wrap');
+  if(wrap) wrap.onclick=function(e){
+    e.stopPropagation();
+    abrirAvatarPicker(this.getAttribute('data-avname'));
+  };
 }
 
 
@@ -8182,7 +8050,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.1 - 12/06/2026 14:14:',reg.scope);})
+      .then(function(reg){console.log('SW v4.1 - 12/06/2026 19:04:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
