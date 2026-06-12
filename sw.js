@@ -1,5 +1,5 @@
 // Peña Garrucha SW v3.4 — Push + Cache
-const CACHE = 'pena-garrucha-v3-4';
+const CACHE = 'pena-garrucha-v4-0';
 
 self.addEventListener('install', e=>{
   self.skipWaiting();
