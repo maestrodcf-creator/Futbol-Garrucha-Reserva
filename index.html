@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 13/06/2026 08:09 -->
+<!-- Peña Garrucha v4.2 - 13/06/2026 19:47 -->
 
 
 <html lang="es">
@@ -561,6 +561,18 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <!-- 3. Botón: Partidos de la temporada -->
         <div id="btn-temporada-inicio"></div>
 
+        <!-- 4. Botón: Instalar app -->
+        <div id="btn-instalar-app" style="display:none;margin-top:16px;background:var(--pitch);border:1px solid rgba(184,246,58,.25);border-radius:var(--r-md);padding:14px 16px;align-items:center;gap:12px;cursor:pointer" onclick="pwaInstalar()">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(184,246,58,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-device-mobile-down" style="font-size:20px;color:var(--lime)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Instalar app</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4)">Añade Peña Garrucha a tu pantalla de inicio</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size:18px;color:var(--muted)"></i>
+        </div>
+
       </div>
     </div>
 
@@ -695,7 +707,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 13/06/2026 08:09</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 13/06/2026 19:47</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -2006,6 +2018,18 @@ function renderInicioMulti(){
   }).join('');
 
   _renderInicioButtons();
+  // Show install button: always on iOS/Safari, on others only if prompt available
+  var installBtn=document.getElementById('btn-instalar-app');
+  if(installBtn){
+    var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+    var isSafari=!_pwaPrompt&&/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    var isStandalone=window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone;
+    if(!isStandalone&&(isIOS||isSafari||_pwaPrompt)){
+      installBtn.style.display='flex';
+    } else if(isStandalone){
+      installBtn.style.display='none';
+    }
+  }
 }
 
 function _renderInicioButtons(){
@@ -7512,6 +7536,91 @@ function renderJugadoresRanking(){
 
 function jugRankTab(key){ var el=document.getElementById('ranking-content'); if(el){el.setAttribute('data-tab',key);renderJugadoresRanking();}}
 
+/* ===== PWA INSTALL ===== */
+function pwaInstalar(){
+  if(_pwaPrompt){
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(result){
+      if(result.outcome==='accepted'){
+        showToast('✓ Instalando la app...');
+        _pwaPrompt=null;
+        var btn=document.getElementById('btn-instalar-app');
+        if(btn) btn.style.display='none';
+      }
+    });
+  } else {
+    mostrarGuiaInstalacion();
+  }
+}
+
+function mostrarGuiaInstalacion(){
+  var modal=document.getElementById('modal-instalar');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modal-instalar';
+    modal.className='modal-bg';
+    document.body.appendChild(modal);
+  }
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  var isAndroid=/Android/.test(navigator.userAgent);
+  var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  var steps='';
+  if(isIOS||isSafari){
+    steps=
+      '<div style="display:flex;flex-direction:column;gap:12px">'+
+        _installStep('1','Abre esta página en Safari','<i class="ti ti-brand-safari" style="font-size:24px;color:#0080ff"></i>','Si ya estás en Safari, continúa al paso 2')+
+        _installStep('2','Pulsa el botón Compartir','<i class="ti ti-upload" style="font-size:24px;color:#0080ff"></i>','El icono cuadrado con una flecha arriba, en la barra inferior')+
+        _installStep('3','Selecciona "Añadir a pantalla de inicio"','<i class="ti ti-square-plus" style="font-size:24px;color:#0080ff"></i>','Desplázate hacia abajo en el menú compartir')+
+        _installStep('4','Pulsa "Añadir"','<i class="ti ti-check" style="font-size:24px;color:var(--grass)"></i>','La app aparecerá en tu pantalla de inicio como una app nativa')+
+      '</div>';
+  } else if(isAndroid){
+    steps=
+      '<div style="display:flex;flex-direction:column;gap:12px">'+
+        _installStep('1','Abre esta página en Chrome','<i class="ti ti-brand-chrome" style="font-size:24px;color:#4285f4"></i>','Si ya estás en Chrome, continúa al paso 2')+
+        _installStep('2','Pulsa el menú (⋮)','<i class="ti ti-dots-vertical" style="font-size:24px;color:#666"></i>','Los tres puntos en la esquina superior derecha')+
+        _installStep('3','Selecciona "Añadir a pantalla de inicio"','<i class="ti ti-square-plus" style="font-size:24px;color:#4285f4"></i>','O "Instalar app" si aparece esa opción')+
+        _installStep('4','Pulsa "Instalar"','<i class="ti ti-check" style="font-size:24px;color:var(--grass)"></i>','La app se instalará y aparecerá en tu escritorio')+
+      '</div>';
+  } else {
+    steps=
+      '<div style="display:flex;flex-direction:column;gap:12px">'+
+        _installStep('1','Abre en Chrome o Edge','<i class="ti ti-brand-chrome" style="font-size:24px;color:#4285f4"></i>','Para poder instalar la app como PWA')+
+        _installStep('2','Busca el icono de instalación','<i class="ti ti-device-mobile-down" style="font-size:24px;color:#4285f4"></i>','En la barra de direcciones aparece un icono ⊕')+
+        _installStep('3','Haz clic en "Instalar"','<i class="ti ti-check" style="font-size:24px;color:var(--grass)"></i>','Confirma en el diálogo que aparece')+
+      '</div>';
+  }
+
+  modal.innerHTML=
+    '<div class="modal">'+
+    '<div class="modal-handle"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'+
+      '<div style="width:42px;height:42px;border-radius:10px;background:var(--pitch);border:1px solid rgba(184,246,58,.3);display:flex;align-items:center;justify-content:center">'+
+        '<i class="ti ti-ball-football" style="font-size:22px;color:var(--lime)"></i>'+
+      '</div>'+
+      '<div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--lime);letter-spacing:.04em">PEÑA GARRUCHA</div>'+
+        '<div style="font-size:11px;color:var(--muted)">Instala la app en tu dispositivo</div>'+
+      '</div>'+
+    '</div>'+
+    '<p class="msub" style="margin-bottom:16px">Accede más rápido, recibe notificaciones y úsala sin conexión.</p>'+
+    steps+
+    '<button onclick="closeModal(\'modal-instalar\')" class="btn-outline" style="width:100%;margin-top:16px">Cerrar</button>'+
+    '</div>';
+  openModal('modal-instalar');
+}
+
+function _installStep(num, title, icon, desc){
+  return '<div style="display:flex;align-items:center;gap:12px;background:var(--offwhite);border-radius:var(--r-sm);padding:10px 12px">'+
+    '<div style="width:28px;height:28px;border-radius:50%;background:var(--grass);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">'+num+'</div>'+
+    icon+
+    '<div style="flex:1">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--dark)">'+title+'</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+desc+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -7930,6 +8039,21 @@ window.addEventListener('load',function(){
 
 
 <script>
+// ── PWA Install prompt ──────────────────────────────────────────────────
+var _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  _pwaPrompt = e;
+  var btn = document.getElementById('btn-instalar-app');
+  if(btn) btn.style.display = 'flex';
+});
+window.addEventListener('appinstalled', function(){
+  _pwaPrompt = null;
+  var btn = document.getElementById('btn-instalar-app');
+  if(btn) btn.style.display = 'none';
+  if(typeof showToast==='function') showToast('✓ App instalada en tu dispositivo');
+});
+
 if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.github.io'){
   // Force clear all old caches and re-register
   navigator.serviceWorker.getRegistrations().then(function(regs){
@@ -7939,8 +8063,8 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
     keys.forEach(function(k){ caches.delete(k); });
   });
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.2 - 13/06/2026 08:09:',reg.scope);})
+    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
+      .then(function(reg){console.log('SW v4.2 - 13/06/2026 19:47:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
