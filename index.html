@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 13/06/2026 08:01 -->
+<!-- Peña Garrucha v4.2 - 13/06/2026 08:09 -->
 
 
 <html lang="es">
@@ -118,7 +118,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 .sci-none{font-size:12px;color:rgba(255,255,255,.3);font-style:italic}
 
 /* Mobile bottom nav */
-.bnav{display:none;background:var(--card);border-top:1px solid var(--border);padding:4px 0 6px;position:fixed;bottom:0;left:0;right:0;z-index:30}
+.bnav{display:none;background:var(--card);border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:4px 0 6px;position:fixed;bottom:0;left:0;right:0;z-index:30}
 .nb{flex:1;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-family:'DM Sans',sans-serif;transition:color .15s}
 .nb i{font-size:19px;transition:color .15s}
 .nb.active{color:var(--grass)}
@@ -354,7 +354,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   .sidebar{display:none}
   .main{margin-left:0;overflow-y:auto}
   .page-header{display:none}
-  .content{padding:0 0 80px}
+  .content{padding:0 0 72px}
+  .sec-pad{padding:12px 14px 20px}
   .mobile-hero{display:block}
   .bnav{display:flex}
   .screens{padding-bottom:0}
@@ -364,7 +365,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
   .counter-big{font-size:46px}
 }
 @media(min-width:768px){
-  .sec-pad{padding:0}
+  .sec-pad{padding:0 24px 24px}
   .screen{display:none}
   .screen.active{display:block}
   .mobile-screens{display:none}
@@ -694,7 +695,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 13/06/2026 08:01</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 13/06/2026 08:09</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -705,7 +706,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
     <!-- Menú principal: 5 botones grandes -->
     <div id="org-menu-principal" style="padding:16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
         <button onclick="orgAbrirSeccion('nueva')" style="background:var(--pitch);border:1.5px solid rgba(184,246,58,.2);border-radius:14px;padding:22px 14px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px">
           <span style="font-size:32px">📋</span>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--lime);letter-spacing:.04em">Nueva conv.</span>
@@ -2688,61 +2689,89 @@ function guardarAsistencia(){
 
 /* ===== ORG JUGADORES ===== */
 function renderOrgJug(){
-  const el=document.getElementById('org-jug-section');if(!el)return;
-  // Ensure jugadores populated from historial
+  var el=document.getElementById('org-jug-section');
+  if(!el) return;
   recalcJugadoresFromHistorial();
-  const keys=Object.keys(jugadores);
+  var keys=Object.keys(jugadores);
   if(!keys.length){
-    el.innerHTML='<div class="sec-label" style="margin-top:20px"><i class="ti ti-users"></i> Jugadores registrados</div>'+
-      '<div class="card"><div class="card-section"><div class="empty-st" style="padding:16px"><p>Sin jugadores todavia. Los jugadores aparecerán al registrar el primer partido.</p></div></div></div>';
+    el.innerHTML='<div class="empty-st" style="padding:24px 0"><i class="ti ti-users"></i><p>Sin jugadores. Aparecen al registrar el primer partido.</p></div>';
     return;
   }
+
+  var sorted=Object.values(jugadores)
+    .filter(function(j){return j&&j.name;})
+    .sort(function(a,b){return (b.partidos||0)-(a.partidos||0);});
+
+  var rows=sorted.map(function(j){
+    var pct=j.partidos?Math.round((j.ganados||0)/j.partidos*100):0;
+    var med=getRatingMedia((jugadores[j.name.trim().toLowerCase()]||{}).ratings);
+    var medCol=med>=85?'#FFD700':med>=75?'#5cb85c':med>=60?'#5bc0de':'#aaa';
+    var safeName=j.name.replace(/"/g,'&quot;');
+    return '<div style="border-bottom:1px solid var(--border);padding:10px 14px">'+
+      // Row 1: avatar + name + buttons
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<label style="display:flex;align-items:center;cursor:pointer;flex-shrink:0">'+
+          '<input type="checkbox" class="jug-chk" data-jname="'+safeName+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--red)">'+
+        '</label>'+
+        renderAvatarCircle(j.name,36,13)+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--dark)">'+j.name+'</div>'+
+          '<div style="font-size:10px;color:var(--muted)">'+(j.posicion||'Sin posición')+'</div>'+
+        '</div>'+
+        // FIFA rating badge
+        '<div style="text-align:center;margin-right:4px">'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:'+medCol+';line-height:1">'+med+'</div>'+
+          '<div style="font-size:8px;color:var(--muted)">FIFA</div>'+
+        '</div>'+
+        '<button data-jn="'+safeName+'" onclick="abrirFifaCard(this.dataset.jn)" style="border:1px solid rgba(184,246,58,.2);background:none;border-radius:6px;cursor:pointer;padding:4px 7px;font-size:11px;color:var(--lime)">⚽</button>'+
+        '<button data-jn="'+safeName+'" onclick="abrirEditJug(this.dataset.jn)" style="border:none;background:none;cursor:pointer;color:#0C447C;padding:4px 6px;font-size:14px"><i class="ti ti-edit"></i></button>'+
+        '<button data-jn="'+safeName+'" onclick="orgBorrarJugador(this.dataset.jn)" style="border:none;background:none;cursor:pointer;color:var(--red);padding:4px 6px;font-size:14px"><i class="ti ti-trash"></i></button>'+
+      '</div>'+
+      // Row 2: stats grid
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px">'+
+        _orgStatCell(j.partidos||0,'Partidos','var(--dark)')+
+        _orgStatCell(j.ganados||0,'Victorias','var(--grass)')+
+        _orgStatCell(j.perdidos||0,'Derrotas','var(--red)')+
+        _orgStatCell(j.goles||0,'Goles','var(--grass)')+
+        _orgStatCell(pct+'%','% Vic','var(--muted)')+
+      '</div>'+
+    '</div>';
+  }).join('');
+
   el.innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;margin-bottom:10px">'+
-      '<div class="sec-label" style="margin:0"><i class="ti ti-users"></i> Jugadores registrados</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;margin-bottom:10px">'+
+      '<div class="sec-label" style="margin:0"><i class="ti ti-users"></i> '+sorted.length+' jugadores registrados</div>'+
       '<button onclick="orgBorrarTodosJugadores()" style="border:1px solid var(--red);background:rgba(192,57,43,.06);border-radius:var(--r-sm);cursor:pointer;padding:5px 11px;font-size:11px;font-weight:600;color:var(--red);display:inline-flex;align-items:center;gap:4px">'+
         '<i class="ti ti-trash"></i> Borrar todos</button>'+
     '</div>'+
     '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden">'+
-      Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0)).map(j=>
-        '<div class="prow" style="padding:9px 13px">'+
-          '<label style="display:flex;align-items:center;cursor:pointer;margin-right:8px">'+
-            '<input type="checkbox" class="jug-chk" data-jname="'+j.name.replace(/"/g,'&quot;')+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--red)">'+
-          '</label>'+
-          '<span class="pname" style="flex:1">'+j.name+'</span>'+
-          '<span style="font-size:11px;color:var(--muted);margin-right:8px">'+(j.goles||0)+' goles &middot; '+(j.partidos||0)+' partidos</span>'+
-          '<button style="border:none;background:none;cursor:pointer;color:#0C447C;padding:4px 6px;font-size:13px;border-radius:6px" '+
-            'data-jn="'+j.name.replace(/"/g,'&quot;')+'" onclick="abrirEditJug(this.dataset.jn)"><i class="ti ti-edit"></i></button>'+
-          '<button style="border:none;background:none;cursor:pointer;color:var(--red);padding:4px 6px;font-size:13px;border-radius:6px" '+
-            'data-jn="'+j.name.replace(/"/g,'&quot;')+'" onclick="orgBorrarJugador(this.dataset.jn)"><i class="ti ti-trash"></i></button>'+
-        '</div>'
-      ).join('')+
+      rows+
     '</div>'+
     '<div style="display:flex;gap:8px;align-items:center;margin-top:8px">'+
       '<button onclick="orgBorrarSeleccionados()" style="border:1px solid var(--red);background:rgba(192,57,43,.06);border-radius:var(--r-sm);cursor:pointer;padding:6px 12px;font-size:12px;font-weight:600;color:var(--red);display:inline-flex;align-items:center;gap:4px">'+
         '<i class="ti ti-trash"></i> Eliminar seleccionados</button>'+
       '<span style="font-size:11px;color:var(--muted)" id="jug-sel-count"></span>'+
     '</div>';
-  setTimeout(()=>{
-    document.querySelectorAll('.jug-chk').forEach(cb=>{
-      cb.addEventListener('change',()=>{
-        const n=document.querySelectorAll('.jug-chk:checked').length;
-        const ct=document.getElementById('jug-sel-count');
-        if(ct)ct.textContent=n?n+' seleccionado'+(n>1?'s':''):'';
+
+  setTimeout(function(){
+    document.querySelectorAll('.jug-chk').forEach(function(cb){
+      cb.addEventListener('change',function(){
+        var n=document.querySelectorAll('.jug-chk:checked').length;
+        var ct=document.getElementById('jug-sel-count');
+        if(ct) ct.textContent=n?n+' seleccionado'+(n>1?'s':''):'';
       });
     });
   },50);
-
-  // Wire FIFA card buttons
-  var jSec=document.getElementById('org-jug-section');
-  if(jSec&&!jSec._fifaWired){
-    jSec._fifaWired=true;
-    jSec.addEventListener('click',function(e){
-      var btn=e.target.closest('.jug-fifa-btn');
-      if(btn){e.stopPropagation();abrirFifaCard(decodeURIComponent(btn.getAttribute('data-jn')));}
-    });
-  }
 }
+
+function _orgStatCell(val, label, color){
+  return '<div style="background:var(--offwhite);border-radius:6px;padding:5px 4px;text-align:center">'+
+    '<div style="font-size:14px;font-weight:700;color:'+color+'">'+val+'</div>'+
+    '<div style="font-size:8px;color:var(--muted);text-transform:uppercase">'+label+'</div>'+
+  '</div>';
+}
+
+
 function orgBorrarJugador(name){
   if(!confirm('Eliminar a '+name+'?'))return;
   delete jugadores[name.trim().toLowerCase()];
@@ -6573,8 +6602,14 @@ function orgAbrirSeccion(seccion){
     recalcJugadoresFromHistorial();
     renderOrgJug();
     renderListaNegra();
-    // Re-render after delay if still loading
-    if(!_dataReady) setTimeout(function(){recalcJugadoresFromHistorial();renderOrgJug();},800);
+    // Always re-render after 1s to catch Supabase data
+    setTimeout(function(){
+      recalcJugadoresFromHistorial();
+      if(Object.keys(jugadores).length>0){
+        renderOrgJug();
+        renderListaNegra();
+      }
+    },1000);
   }
   if(seccion==='partidos')   renderOrgHistorial();
   if(seccion==='cartera'){
@@ -7905,7 +7940,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.2 - 13/06/2026 08:01:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 13/06/2026 08:09:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
