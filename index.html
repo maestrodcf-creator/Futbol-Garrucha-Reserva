@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 12/06/2026 21:39 -->
+<!-- Peña Garrucha v4.2 - 13/06/2026 08:01 -->
 
 
 <html lang="es">
@@ -694,7 +694,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 12/06/2026 21:39</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 13/06/2026 08:01</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
@@ -1847,34 +1847,22 @@ function patchShowScreen(){
   const orig=showScreen;
   showScreen=function(id,btn){
     orig(id,btn);
-    if(id==='temporadas')renderTemporadas();
+    if(id==='inicio')   { renderInicioMulti(); }
+    if(id==='jugadores'){ recalcJugadoresFromHistorial(); renderJugadoresEnhanced(); }
+    if(id==='hist')     { recalcJugadoresFromHistorial(); renderHistorialEnhanced(); }
+    if(id==='dashboard'){ recalcJugadoresFromHistorial(); renderDashboard(); renderJugadoresRanking(); }
+    if(id==='temporadas'){ renderTemporadas(); }
+    if(id==='campo')    { mostrarListaEquipos(); }
+    if(id==='avatar')   { renderAvatarEditor(); }
     if(id==='org'&&pinUnlocked){
-      // Reset form so it renders fresh
       var fc=document.getElementById('org-form-col');
       if(fc)fc.innerHTML='';
-      // Always go back to main menu when navigating to org
       orgVolverMenu();
       renderOrgPanel();
     }
-    if(id==='campo'){mostrarListaEquipos();}
-    if(id==='lista'){/* lista rendered by verListaConv */}
-    if(id==='perfil'){/* perfil rendered by abrirPerfil */}
-    if(id==='jugadores'){initRankingSection();renderJugadoresEnhanced();renderRankingEnhanced();}
-    if(id==='avatar'){renderAvatarEditor();}
-    if(id==='editar-conv'){/* content already rendered by abrirEditarConvScreen */}
-    if(id==='hist')renderHistorialEnhanced();
-    if(id==='dashboard'){
-      if(!_dataReady){
-        var el=document.getElementById('dashboard-content');
-        if(el)el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="ti ti-loader-2" style="font-size:32px;display:block;margin-bottom:10px"></i>Cargando datos...</div>';
-        setTimeout(function(){recalcJugadoresFromHistorial();renderDashboard();renderJugadoresRanking();},800);
-      } else {
-        recalcJugadoresFromHistorial();renderDashboard();renderJugadoresRanking();
-      }
-    }
-    if(id==='inicio')renderInicioMulti();
   };
 }
+
 
 /* ===== TIPO SELECTOR ===== */
 let selTipoNew_local='sala';
@@ -3548,180 +3536,117 @@ function renderPerfil(j){
 
 /* ===== DASHBOARD DE TEMPORADA ===== */
 function renderDashboard(){
-  const el=document.getElementById('dashboard-content');
-  if(!el)return;
+  var el=document.getElementById('dashboard-content');
+  if(!el) return;
 
-  // Ensure jugadores data is populated
-  if(Object.keys(jugadores).length===0) recalcJugadoresFromHistorial();
-  const jugados=historial.filter(h=>h.estado==='jugado');
-  const cancelados=historial.filter(h=>h.estado==='cancelado');
-  const totalPartidos=jugados.length;
-  const mediaAsistencia=totalPartidos?Math.round(jugados.reduce((s,h)=>s+((h.players||[]).filter(p=>p.rol==='tit').length),0)/totalPartidos*10)/10:0;
+  recalcJugadoresFromHistorial();
 
-  // Top goleador
-  const _jvals=Object.values(jugadores).filter(j=>j&&j.name);
-  const topGoleador=_jvals.sort((a,b)=>(b.goles||0)-(a.goles||0))[0];
-  const topAsistente=null; // asistencias no registradas
-  const topPartidos=Object.values(jugadores).sort((a,b)=>(b.partidos||0)-(a.partidos||0))[0];
-  const totalJugadores=Object.keys(jugadores).length;
+  var jugados=historial.filter(function(h){return h.estado==='jugado';});
+  var nPartidos=jugados.length;
+  var nJugadores=Object.keys(jugadores).length;
 
-  // Resultados: goles totales y empates
-  const totalGolesA=jugados.reduce((s,h)=>s+(h.scoreA||0),0);
-  const totalGolesB=jugados.reduce((s,h)=>s+(h.scoreB||0),0);
-  const empates=jugados.filter(h=>h.scoreA===h.scoreB).length;
-
-  // Monthly data
-  const MESES_CORTOS={'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
-    '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'};
-  const mesesMap={};
-  jugados.forEach(h=>{
-    if(!h.fecha)return;
-    const parts=h.fecha.split('/');
-    if(parts.length!==3)return;
-    const key=parts[2]+'-'+parts[1].padStart(2,'0');
-    if(!mesesMap[key])mesesMap[key]={partidos:0,asistentes:0,goles:0};
-    mesesMap[key].partidos++;
-    mesesMap[key].asistentes+=((h.players||[]).filter(p=>p.rol==='tit').length)||0;
-    mesesMap[key].goles+=(h.scoreA||0)+(h.scoreB||0);
-  });
-  const mesesArr=Object.entries(mesesMap).sort((a,b)=>a[0].localeCompare(b[0]));
-  function labelMes(k){const[y,m]=k.split('-');return(MESES_CORTOS[m]||m)+'\n'+y.slice(2);}
-
-  // SVG bar chart builder
-  function svgBars(data,color,label){
-    if(!data.length)return '<div style="text-align:center;padding:20px;font-size:12px;color:var(--muted)">Sin datos aun</div>';
-    const W=320,H=100,n=data.length;
-    const barW=Math.max(8,Math.min(40,Math.floor((W-24)/n)-4));
-    const gap=Math.floor((W-24)/n);
-    const maxV=Math.max(...data.map(d=>d.v),1);
-    const bars=data.map((d,i)=>{
-      const bh=maxV>0?Math.round((d.v/maxV)*(H-32)):0;
-      const x=12+i*gap+Math.floor((gap-barW)/2);
-      const y=H-22-bh;
-      const lbl=d.label.split('\n');
-      return '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+Math.max(2,bh)+'" rx="3" fill="'+color+'"/>'+
-        (d.v>0?'<text x="'+(x+barW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="8" font-weight="700" fill="'+color+'" font-family="DM Sans,sans-serif">'+d.v+'</text>':'')+
-        lbl.map((l,li)=>'<text x="'+(x+barW/2)+'" y="'+(H-9+li*9)+'" text-anchor="middle" font-size="7.5" fill="var(--muted)" font-family="DM Sans,sans-serif">'+l+'</text>').join('');
-    }).join('');
-    return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">'+bars+'</svg>';
-  }
-
-  const chartPartidos=svgBars(mesesArr.map(([k,v])=>({v:v.partidos,label:labelMes(k)})),'var(--grass)','Partidos');
-  const chartAsistencia=svgBars(mesesArr.map(([k,v])=>({v:v.asistentes,label:labelMes(k)})),'#0C447C','Asistencia');
-  const chartGoles=svgBars(mesesArr.map(([k,v])=>({v:v.goles,label:labelMes(k)})),'var(--amber)','Goles');
-
-  if(!totalPartidos){
+  if(!nPartidos){
     el.innerHTML=
-      '<div style="background:var(--pitch);border-radius:var(--r-md);padding:24px;text-align:center;margin-bottom:16px">'+
+      '<div style="background:var(--pitch);border-radius:var(--r-md);padding:32px;text-align:center;margin-bottom:16px">'+
         '<i class="ti ti-chart-bar" style="font-size:40px;color:rgba(184,246,58,.3);display:block;margin-bottom:12px"></i>'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.04em;margin-bottom:6px">Dashboard de Temporada</div>'+
-        '<div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.6">Los datos apareceran aqui cuando se cierren partidos con resultado desde el panel del organizador.</div>'+
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime)">ESTADÍSTICAS DE LA TEMPORADA</div>'+
+        '<p style="font-size:13px;color:var(--muted);margin-top:8px">Los datos aparecerán aquí cuando se registren partidos con resultado.</p>'+
       '</div>';
     return;
   }
 
+  // Global stats
+  var totalGoles=jugados.reduce(function(s,h){
+    var st=h.statsJugadores||{};
+    return s+Object.values(st).reduce(function(a,p){return a+(p.goles||0);},0);
+  },0);
+  var mediaAsist=Math.round(jugados.reduce(function(s,h){
+    return s+(h.players||[]).filter(function(p){return p.rol==='tit';}).length;
+  },0)/nPartidos*10)/10;
+
+  // Top goleador
+  var jvals=Object.values(jugadores).filter(function(j){return j&&j.name;});
+  var topGol=jvals.sort(function(a,b){return (b.goles||0)-(a.goles||0);})[0];
+  var topPart=jvals.sort(function(a,b){return (b.partidos||0)-(a.partidos||0);})[0];
+  var topWin=jvals.sort(function(a,b){return (b.ganados||0)-(a.ganados||0);})[0];
+
   el.innerHTML=
-    // ── Cabecera ────────────────────────────────────────────────────────
-    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px">'+
-      '<div style="width:48px;height:48px;border-radius:50%;background:rgba(184,246,58,.1);border:2px solid rgba(184,246,58,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-        '<i class="ti ti-chart-bar" style="font-size:22px;color:var(--lime)"></i>'+
-      '</div>'+
-      '<div>'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime);letter-spacing:.05em;line-height:1">Dashboard de Temporada</div>'+
-        '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">'+totalPartidos+' partido'+(totalPartidos!==1?'s':'')+' jugado'+(totalPartidos!==1?'s':'')+' &middot; '+totalJugadores+' jugador'+(totalJugadores!==1?'es':'')+'</div>'+
+    // Header
+    '<div style="background:var(--pitch);border-radius:var(--r-md);padding:16px;margin-bottom:16px">'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:rgba(184,246,58,.6);letter-spacing:.06em;margin-bottom:12px">RESUMEN TEMPORADA 25/26</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+        _statBox(nPartidos,'Partidos')+
+        _statBox(totalGoles,'Goles')+
+        _statBox(Math.round(mediaAsist*10)/10,'Media asist.')+
       '</div>'+
     '</div>'+
 
-    // ── Métricas principales ─────────────────────────────────────────────
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
-      [
-        {v:totalPartidos,l:'Partidos jugados',i:'ti-ball-football',c:'var(--grass)'},
-        {v:mediaAsistencia,l:'Media asistencia',i:'ti-users',c:'#0C447C'},
-        {v:totalGolesA+totalGolesB,l:'Goles totales',i:'ti-tournament',c:'var(--amber)'},
-        {v:cancelados.length,l:'Cancelados',i:'ti-x',c:'var(--red)'},
-      ].map(m=>
-        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;display:flex;align-items:center;gap:10px">'+
-          '<div style="width:36px;height:36px;border-radius:var(--r-sm);background:var(--offwhite);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-            '<i class="ti '+m.i+'" style="font-size:18px;color:'+m.c+'"></i>'+
-          '</div>'+
-          '<div>'+
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;line-height:1;color:'+m.c+'">'+m.v+'</div>'+
-            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px">'+m.l+'</div>'+
-          '</div>'+
-        '</div>'
-      ).join('')+
+    // Top 3
+    '<div class="sec-label" style="margin-bottom:8px">🏆 Líderes de la temporada</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
+      _leaderCard('⚽','Goleador',topGol?topGol.name:'—',topGol?topGol.goles||0:0,'goles')+
+      _leaderCard('🔄','Más partidos',topPart?topPart.name:'—',topPart?topPart.partidos||0:0,'partidos')+
+      _leaderCard('🏅','Más victorias',topWin?topWin.name:'—',topWin?topWin.ganados||0:0,'victorias')+
     '</div>'+
 
-    // ── Top jugadores ─────────────────────────────────────────────────────
-    '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:14px">'+
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px"><i class="ti ti-medal" style="font-size:13px"></i> Líderes de la temporada</div>'+
-      [
-        {label:'Goleador',icon:'ti-ball-football',color:'var(--grass)',j:topGoleador,stat:'goles'},
-        {label:'Asistente',icon:'ti-boot-2',color:'#0C447C',j:topAsistente,stat:'asistencias'},
-        {label:'Más partidos',icon:'ti-calendar-check',color:'var(--amber)',j:topPartidos,stat:'partidos'},
-      ].map(row=>{
-        if(!row.j)return '';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
-          '<div style="width:32px;height:32px;border-radius:50%;background:'+row.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+ini2(row.j.name)+'</div>'+
-          '<div style="flex:1">'+
-            '<div style="font-weight:700;font-size:13px;color:var(--dark)">'+row.j.name+'</div>'+
-            '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">'+row.label+'</div>'+
-          '</div>'+
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:'+row.color+'">'+( row.j[row.stat]||0)+'</div>'+
-          '<i class="ti '+row.icon+'" style="font-size:15px;color:'+row.color+';opacity:.6"></i>'+
-        '</div>';
-      }).join('')+
-    '</div>'+
-
-    // ── Gráfico partidos por mes ──────────────────────────────────────────
-    (mesesArr.length?
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-chart-bar" style="font-size:12px"></i> Partidos por mes</div>'+
-        chartPartidos+
-      '</div>'+
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-users" style="font-size:12px"></i> Asistencia por mes</div>'+
-        chartAsistencia+
-      '</div>'+
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:14px">'+
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px"><i class="ti ti-tournament" style="font-size:12px"></i> Goles por mes</div>'+
-        chartGoles+
-      '</div>':'') +
-
-    // ── Ranking completo ──────────────────────────────────────────────────
-    (Object.keys(jugadores).length?
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px">'+
-        '<div style="padding:12px 14px;border-bottom:1px solid var(--border)">'+
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)"><i class="ti ti-list-numbers" style="font-size:12px"></i> Tabla de la temporada</div>'+
-        '</div>'+
-        '<table style="width:100%;border-collapse:collapse">'+
-          '<thead><tr style="background:var(--offwhite)">'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left;width:28px">#</th>'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left">Jugador</th>'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:center">PJ</th>'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:var(--grass);text-transform:uppercase;letter-spacing:.06em;text-align:center">G</th>'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:#0C447C;text-transform:uppercase;letter-spacing:.06em;text-align:center">A</th>'+
-            '<th style="padding:7px 10px;font-size:9px;font-weight:700;color:#B8860B;text-transform:uppercase;letter-spacing:.06em;text-align:center">V</th>'+
-          '</tr></thead>'+
-          '<tbody>'+
-            Object.values(jugadores).sort((a,b)=>(b.goles||0)-(a.goles||0)||(b.partidos||0)-(a.partidos||0)).map((j,i)=>
-              '<tr style="border-bottom:1px solid var(--border)">'+
-                '<td style="padding:8px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:'+(i===0?'#C8960C':i===1?'#9E9E9E':i===2?'#8D6E63':'var(--muted)')+'">'+(i+1)+'</td>'+
-                '<td style="padding:8px 10px">'+
-                  '<div style="display:flex;align-items:center;gap:7px">'+renderAvatarCircle(j.name,26,9)+
-                    '<span style="font-weight:600;font-size:12px;color:var(--dark)">'+j.name+'</span>'+
-                  '</div>'+
-                '</td>'+
-                '<td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted)">'+(j.partidos||0)+'</td>'+
-                '<td style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:16px;padding:8px 10px;border-bottom:1px solid var(--border)">'+(j.goles||0)+'</td>'+
-                '<td style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:16px;padding:8px 10px;border-bottom:1px solid var(--border)">'+(j.asistencias||0)+'</td>'+
-                '<td style="text-align:right;font-family:\'Bebas Neue\',sans-serif;font-size:16px;padding:8px 10px;border-bottom:1px solid var(--border)">'+(j.ganados||0)+'</td>'+
-              '</tr>'
-            ).join('')+
-          '</tbody>'+
-        '</table>'+
-      '</div>':'') ;
+    // Results by month
+    _buildMesChart(jugados);
 }
+
+function _statBox(val,label){
+  return '<div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px;text-align:center">'+
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--lime);line-height:1">'+val+'</div>'+
+    '<div style="font-size:9px;color:rgba(184,246,58,.5);text-transform:uppercase;margin-top:2px">'+label+'</div>'+
+  '</div>';
+}
+
+function _leaderCard(icon,label,name,val,unit){
+  return '<div class="card" style="padding:10px;text-align:center">'+
+    '<div style="font-size:20px;margin-bottom:4px">'+icon+'</div>'+
+    '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">'+label+'</div>'+
+    '<div style="font-size:12px;font-weight:700;color:var(--dark)">'+name+'</div>'+
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--grass);line-height:1">'+val+'</div>'+
+    '<div style="font-size:9px;color:var(--muted)">'+unit+'</div>'+
+  '</div>';
+}
+
+function _buildMesChart(jugados){
+  if(!jugados.length) return '';
+  var meses={};
+  jugados.forEach(function(h){
+    var parts=(h.fecha||'').split('/');
+    if(parts.length<2) return;
+    var key=parts[1]+'/'+parts[2];
+    var mes=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(parts[1])||0]||parts[1];
+    if(!meses[key]) meses[key]={mes:mes,v:0,d:0,e:0};
+    if(h.scoreA>h.scoreB) meses[key].v++;
+    else if(h.scoreB>h.scoreA) meses[key].d++;
+    else meses[key].e++;
+  });
+  var keys=Object.keys(meses).sort();
+  if(!keys.length) return '';
+  return '<div class="sec-label" style="margin-bottom:8px">📅 Partidos por mes</div>'+
+    '<div class="card" style="overflow:hidden;margin-bottom:16px">'+
+    keys.map(function(k){
+      var m=meses[k];
+      var total=m.v+m.d+m.e;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">'+
+        '<div style="width:36px;font-size:11px;font-weight:700;color:var(--muted)">'+m.mes+'</div>'+
+        '<div style="flex:1;display:flex;gap:3px;height:8px;border-radius:4px;overflow:hidden">'+
+          (m.v?'<div style="width:'+(m.v/total*100)+'%;background:var(--grass)"></div>':'')+
+          (m.e?'<div style="width:'+(m.e/total*100)+'%;background:#FB8C00"></div>':'')+
+          (m.d?'<div style="width:'+(m.d/total*100)+'%;background:var(--red)"></div>':'')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--muted)">'+total+' partidos</div>'+
+        '<div style="font-size:10px;color:var(--grass)">'+m.v+'V</div>'+
+        '<div style="font-size:10px;color:#FB8C00">'+m.e+'E</div>'+
+        '<div style="font-size:10px;color:var(--red)">'+m.d+'D</div>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+}
+
+
 
 /* ===== INSIGNIAS ===== */
 function calcInsignias(jName){
@@ -7484,40 +7409,70 @@ function renderFifaList(){
 }
 
 function renderJugadoresRanking(){
-  var el = document.getElementById('ranking-content');
+  var el=document.getElementById('ranking-content');
   if(!el) return;
-  var keys = Object.keys(jugadores);
-  if(!keys.length){ el.innerHTML=''; return; }
-  var tabs = [{key:'goles',label:'Goles'},{key:'partidos',label:'Partidos'},{key:'ganados',label:'Victorias'}];
-  var active = el.getAttribute('data-tab')||'goles';
-  var tabHtml = '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+
+  recalcJugadoresFromHistorial();
+  var jvals=Object.values(jugadores).filter(function(j){return j&&j.name&&(j.partidos||0)>0;});
+  if(!jvals.length){
+    el.innerHTML='<div class="empty-st" style="padding:24px 0"><i class="ti ti-users"></i><p>Sin datos de jugadores aún</p></div>';
+    return;
+  }
+
+  var activeTab=el.getAttribute('data-tab')||'goles';
+  var tabs=[
+    {key:'goles',label:'Goles',icon:'⚽'},
+    {key:'partidos',label:'Partidos',icon:'🔄'},
+    {key:'ganados',label:'Victorias',icon:'🏅'},
+  ];
+
+  var tabHtml='<div style="display:flex;gap:6px;margin-bottom:12px">'+
     tabs.map(function(t){
-      var sel = t.key===active;
-      return '<button class="jrb" data-rk="'+t.key+'" style="border:1px solid '+(sel?'var(--grass)':'var(--border)')+';background:'+(sel?'rgba(34,136,61,.12)':'none')+';border-radius:99px;padding:5px 14px;font-size:11px;font-weight:700;color:'+(sel?'var(--grass)':'var(--muted)')+';cursor:pointer;font-family:DM Sans,sans-serif">'+t.label+'</button>';
+      var sel=t.key===activeTab;
+      return '<button class="jrb" data-rk="'+t.key+'" style="border:1px solid '+(sel?'var(--grass)':'var(--border)')+
+        ';background:'+(sel?'rgba(34,136,61,.12)':'none')+
+        ';border-radius:99px;padding:5px 14px;font-size:11px;font-weight:700;color:'+
+        (sel?'var(--grass)':'var(--muted)')+';cursor:pointer;font-family:\'DM Sans\',sans-serif">'+
+        t.icon+' '+t.label+'</button>';
     }).join('')+
   '</div>';
-  var sorted = Object.values(jugadores).filter(function(j){return j.name;}).sort(function(a,b){return (b[active]||0)-(a[active]||0);});
-  var rows = sorted.map(function(j,i){
-    var avHtml = renderAvatarCircle(j.name, 30, 11);
-    var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'<span style="font-size:12px;color:var(--muted);font-weight:700">'+(i+1)+'</span>';
+
+  var sorted=jvals.slice().sort(function(a,b){return (b[activeTab]||0)-(a[activeTab]||0);});
+
+  var rows=sorted.map(function(j,i){
+    var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':
+      '<span style="font-size:12px;color:var(--muted);font-weight:700;width:20px;text-align:center;display:inline-block">'+(i+1)+'</span>';
+    var val=j[activeTab]||0;
+    var pct=j.partidos?Math.round((j.ganados||0)/j.partidos*100):0;
     return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">'+
-      '<div style="width:24px;text-align:center">'+medal+'</div>'+
-      avHtml+
-      '<div style="flex:1;font-size:13px;font-weight:600;color:var(--dark)">'+j.name+'</div>'+
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--lime)">'+(j[active]||0)+'</div>'+
+      '<div style="width:24px;text-align:center;flex-shrink:0">'+medal+'</div>'+
+      renderAvatarCircle(j.name,30,11)+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:600;color:var(--dark)">'+j.name+'</div>'+
+        '<div style="font-size:10px;color:var(--muted)">'+j.partidos+' partidos · '+pct+'% victorias</div>'+
+      '</div>'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--lime)">'+val+'</div>'+
     '</div>';
   }).join('');
-  el.setAttribute('data-tab', active);
-  el.innerHTML = '<div class="sec-label" style="margin-bottom:8px"><i class="ti ti-trophy" style="font-size:13px"></i> Clasificación</div>'+
+
+  el.setAttribute('data-tab',activeTab);
+  el.innerHTML=
+    '<div class="sec-label" style="margin-bottom:8px">📊 Clasificación jugadores</div>'+
     '<div class="card" style="overflow:hidden">'+
       '<div style="padding:12px 14px 8px">'+tabHtml+'</div>'+
       rows+
     '</div>';
 
-  // Wire ranking tab buttons
-  var rc=document.getElementById('ranking-content');
-  if(rc)rc.addEventListener('click',function(e){var b=e.target.closest('.jrb');if(b){rc.setAttribute('data-tab',b.getAttribute('data-rk'));renderJugadoresRanking();}});
+  // Wire tab buttons
+  el.querySelectorAll('.jrb').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      el.setAttribute('data-tab',this.getAttribute('data-rk'));
+      renderJugadoresRanking();
+    });
+  });
 }
+
+
 
 
 function jugRankTab(key){ var el=document.getElementById('ranking-content'); if(el){el.setAttribute('data-tab',key);renderJugadoresRanking();}}
@@ -7950,7 +7905,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=40')
-      .then(function(reg){console.log('SW v4.2 - 12/06/2026 21:39:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 13/06/2026 08:01:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
