@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 06:37 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 06:41 -->
 
 
 <html lang="es">
@@ -533,8 +533,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <div class="mh-sub">Fútbol · Convocatorias</div>
       </div>
     
-    <button id="btn-instalar-app-mob" onclick="pwaInstalar()" style="display:none;margin:4px auto 0;border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.08);border-radius:99px;padding:5px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-device-mobile-down" style="font-size:13px"></i> Instalar app</button>
-    <button onclick="mostrarModalActivarNotif()" style="border:1px solid rgba(184,246,58,.2);background:rgba(184,246,58,.05);border-radius:99px;padding:6px 16px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Activar notificaciones</button>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center"><button id="btn-instalar-app-mob" onclick="pwaInstalar()" style="display:none;border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.08);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-device-mobile-down" style="font-size:13px"></i> Instalar app</button><button onclick="mostrarModalActivarNotif()" style="border:1px solid rgba(184,246,58,.2);background:rgba(184,246,58,.05);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificaciones</button></div>
   </div>
     <div id="mh-conv-area"><div class="mh-no-conv"><p>Sin convocatoria activa</p></div></div>
   </div>
@@ -705,9 +704,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 06:37</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 06:41</span>
       </div>
       <div style="display:flex;gap:6px">
+        <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
         <button onclick="exportarCSV()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-file-export" style="font-size:13px"></i> CSV</button>
         <button onclick="abrirCambiarPin()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-keypad" style="font-size:13px"></i> PIN</button>
         <button onclick="lockOrg()" style="border:1px solid var(--border2);background:none;border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--muted);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-lock" style="font-size:13px"></i> Salir</button>
@@ -7694,21 +7694,104 @@ function mostrarModalNotifManual(){
   var modal=document.getElementById('modal-notif-manual');
   if(!modal){modal=document.createElement('div');modal.id='modal-notif-manual';modal.className='modal-bg';document.body.appendChild(modal);}
   var nSubs=pushSubs?pushSubs.length:0;
+
+  // Build active conv info for templates
+  var convActiva=convocatorias.find(function(c){return c.status==='abierta';});
+  var tipoConv=convActiva?(convActiva.tipo==='sala'?'Fútbol Sala':'Fútbol 7'):'';
+  var diaConv=convActiva?(convActiva.dia+' a las '+convActiva.hora):'';
+
+  var PLANTILLAS=[
+    {
+      icon:'⚽',
+      label:'Convocatoria abierta',
+      titulo:'⚽ ¡Convocatoria abierta!',
+      msg:'Ya puedes apuntarte al '+(tipoConv||'próximo partido')+
+          (diaConv?' del '+diaConv:'')+'. ¡Entra en la app y reserva tu plaza!'
+    },
+    {
+      icon:'🏟️',
+      label:'Partido esta semana',
+      titulo:'🏟️ Partido esta semana',
+      msg:'Esta semana hay partido. Consulta la convocatoria en la app y confirma tu asistencia.'
+    },
+    {
+      icon:'❌',
+      label:'Sin partido esta semana',
+      titulo:'❌ Sin partido esta semana',
+      msg:'Esta semana no hay partido. ¡Nos vemos la próxima! Pendiente de próximas convocatorias.'
+    },
+    {
+      icon:'📋',
+      label:'Lista cerrada',
+      titulo:'📋 Lista cerrada',
+      msg:'La convocatoria ya está completa. Si estás en la lista, recuerda el horario. ¡Mucha suerte!'
+    },
+    {
+      icon:'🏆',
+      label:'Resultado del partido',
+      titulo:'🏆 Resultado del partido',
+      msg:'El partido ha terminado. Consulta el resultado y las estadísticas en el historial de la app.'
+    },
+    {
+      icon:'✍️',
+      label:'Mensaje libre',
+      titulo:'',
+      msg:''
+    }
+  ];
+
+  var plantillasHtml=PLANTILLAS.map(function(p,i){
+    return '<button onclick="seleccionarPlantilla('+i+')" '+
+      'style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;'+
+      'background:var(--offwhite);border:1px solid var(--border);border-radius:var(--r-sm);'+
+      'cursor:pointer;text-align:left;margin-bottom:6px;font-family:\'DM Sans\',sans-serif">'+
+      '<span style="font-size:18px">'+p.icon+'</span>'+
+      '<span style="font-size:12px;font-weight:600;color:var(--dark)">'+p.label+'</span>'+
+    '</button>';
+  }).join('');
+
   modal.innerHTML=
     '<div class="modal">'+
     '<div class="modal-handle"></div>'+
-    '<h2>\uD83D\uDD14 Enviar notificaci\u00F3n</h2>'+
-    '<p class="msub">'+nSubs+' dispositivo'+(nSubs!==1?'s':'')+' suscrito'+(nSubs!==1?'s':'')+' a notificaciones push</p>'+
-    '<div class="fl" style="margin-top:0">T\u00EDtulo</div>'+
-    '<input class="fi" type="text" id="notif-title" value="\uD83D\uDD14 Pe\u00F1a Garrucha" placeholder="T\u00EDtulo...">'+
-    '<div class="fl">Mensaje</div>'+
-    '<textarea class="fi" id="notif-body" rows="3" placeholder="Escribe el mensaje..." style="height:80px;resize:none">\u00A1Hay un nuevo bot\u00F3n en la app para instalarla en tu m\u00F3vil f\u00E1cilmente! Entra y compru\u00E9balo.</textarea>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
-      '<button class="btn-outline" onclick="closeModal(\'modal-notif-manual\')">Cancelar</button>'+
-      '<button class="btn-green" onclick="enviarDesdeModal()">\uD83D\uDD14 Enviar</button>'+
+    '<h2>🔔 Enviar notificación</h2>'+
+    '<p class="msub">'+nSubs+' dispositivo'+(nSubs!==1?'s':'')+' suscrito'+(nSubs!==1?'s':'')+
+      '. Elige una plantilla o escribe un mensaje libre.</p>'+
+    '<div id="notif-plantillas">'+plantillasHtml+'</div>'+
+    '<div id="notif-editor" style="display:none">'+
+      '<button onclick="volverPlantillas()" style="display:inline-flex;align-items:center;gap:4px;'+
+        'border:none;background:none;cursor:pointer;color:var(--muted);font-size:12px;'+
+        'font-family:\'DM Sans\',sans-serif;padding:0;margin-bottom:10px">'+
+        '<i class="ti ti-arrow-left" style="font-size:14px"></i> Plantillas</button>'+
+      '<div class="fl" style="margin-top:0">Título</div>'+
+      '<input class="fi" type="text" id="notif-title" placeholder="Título...">'+
+      '<div class="fl">Mensaje</div>'+
+      '<textarea class="fi" id="notif-body" rows="4" placeholder="Escribe el mensaje..."'+
+        'style="height:90px;resize:none"></textarea>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
+        '<button class="btn-outline" onclick="closeModal(\'modal-notif-manual\')">Cancelar</button>'+
+        '<button class="btn-green" onclick="enviarDesdeModal()">🔔 Enviar</button>'+
+      '</div>'+
     '</div>'+
     '</div>';
+
+  // Store plantillas for seleccionarPlantilla
+  window._notifPlantillas = PLANTILLAS;
   openModal('modal-notif-manual');
+}
+
+function seleccionarPlantilla(idx){
+  var p=window._notifPlantillas[idx];
+  var tEl=document.getElementById('notif-title');
+  var bEl=document.getElementById('notif-body');
+  if(tEl) tEl.value=p.titulo;
+  if(bEl) bEl.value=p.msg;
+  document.getElementById('notif-plantillas').style.display='none';
+  document.getElementById('notif-editor').style.display='block';
+}
+
+function volverPlantillas(){
+  document.getElementById('notif-plantillas').style.display='block';
+  document.getElementById('notif-editor').style.display='none';
 }
 
 function enviarDesdeModal(){
@@ -8240,7 +8323,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 06:37:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 06:41:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
