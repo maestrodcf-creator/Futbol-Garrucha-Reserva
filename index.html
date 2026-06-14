@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 11:36 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 11:49 -->
 
 
 <html lang="es">
@@ -701,7 +701,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 11:36</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 11:49</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -1272,7 +1272,7 @@ function renderCampo(){
     const col=isGK?'#5b9bd5':'#b8f63a';
     const tc=isGK?'#0d1f3c':'#0d4a1f';
     return'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'+
-      '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';color:'+tc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,.3)">'+initials(p.name)+'</div>'+
+      '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';color:'+tc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid rgba(255,255,255,.3)">'+renderAvatarCircle(p.name,36,12)+'</div>'+
       '<div style="font-size:9px;font-weight:700;color:var(--lime);text-align:center;max-width:44px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name.split(' ')[0]+'</div>'+
     '</div>';
   }
@@ -1356,7 +1356,7 @@ function renderCampo(){
     const sinPos=tit.filter(p=>!eqA.includes(p)&&!eqB.includes(p));
     sinSec.style.display=sinPos.length?'block':'none';
     const sinList=document.getElementById('sin-asignar-list');
-    if(sinList)sinList.innerHTML=sinPos.map(p=>'<div class="prow"><div class="avatar av-tit">'+initials(p.name)+'</div><span class="pname">'+p.name+'</span></div>').join('');
+    if(sinList)sinList.innerHTML=sinPos.map(p=>'<div class="prow">'+renderAvatarCircle(p.name,28,10)+'<span class="pname" style="margin-left:5px">'+p.name+'</span></div>').join('');
   }
 }
 
@@ -3606,6 +3606,11 @@ function renderDashboard(){
   var nPartidos=jugados.length;
   var nJugadores=Object.keys(jugadores).length;
 
+  if(!nPartidos && !historial.length && !_dataReady){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="ti ti-loader-2" style="font-size:32px;display:block;margin-bottom:10px"></i>Cargando datos...</div>';
+    setTimeout(function(){ recalcJugadoresFromHistorial(); renderDashboard(); renderJugadoresRanking(); }, 1500);
+    return;
+  }
   if(!nPartidos){
     el.innerHTML=
       '<div style="background:var(--pitch);border-radius:var(--r-md);padding:32px;text-align:center;margin-bottom:16px">'+
@@ -4145,7 +4150,18 @@ function dibujarCampoEquipos(){
       `border:2.5px solid rgba(255,255,255,.55);display:flex;align-items:center;`+
       `justify-content:center;flex-direction:column;transition:transform .15s,box-shadow .15s;`+
       (isGK?`outline:2.5px dashed rgba(255,255,255,.75);outline-offset:2px;`:'');
-    circle.innerHTML = `<span style="font-size:${Math.round(R*.55)}px;font-weight:800;color:#111;line-height:1">${initials(p.name)}</span>`;
+    circle.innerHTML = `<span style="font-size:${Math.round(R*.55)}px;font-weight:800;color:#111;line-height:1">${ini2(p.name)}</span>`;
+    // Override circle with avatar if player has photo/emoji
+    var av9 = getAvatar(p.name);
+    if(av9.type==='photo'){
+      circle.style.backgroundImage = 'url('+av9.val+')';
+      circle.style.backgroundSize = 'cover';
+      circle.style.backgroundPosition = 'center';
+      circle.innerHTML = '';
+    } else if(av9.type==='emoji'){
+      circle.style.background = 'rgba(0,0,0,.15)';
+      circle.innerHTML = '<span style="font-size:'+Math.round(R*.7)+'px">'+av9.val+'</span>';
+    }
     wrap.appendChild(circle);
 
     // Name label
@@ -5681,27 +5697,31 @@ function abrirAvatarPicker(name){
   // Inject photo upload button after modal renders
   setTimeout(function(){
     var m2 = document.getElementById('modal-avatar-picker');
-    if(!m2) return;
+    if(!m2 || m2.querySelector('#photo-upload-btn')) return; // prevent duplicate
     var photoDiv = document.createElement('div');
     photoDiv.style.cssText = 'margin-bottom:14px';
-    var photoLbl = document.createElement('label');
-    photoLbl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(184,246,58,.06);border:1px solid rgba(184,246,58,.2);border-radius:8px;padding:11px;cursor:pointer;font-size:13px;font-weight:700;color:var(--lime)';
-    photoLbl.innerHTML = '<i class="ti ti-camera" style="font-size:16px"></i> Subir foto de perfil';
-    var photoInp = document.createElement('input');
-    photoInp.type='file'; photoInp.accept='image/*'; photoInp.style.display='none';
-    photoInp.onchange = function(){ cargarFotoAvatar(this, name); };
-    photoLbl.appendChild(photoInp);
-    photoDiv.appendChild(photoLbl);
+    // Use a visible button that triggers a real file input
+    photoDiv.innerHTML =
+      '<label id="photo-upload-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;'+
+      'background:rgba(184,246,58,.06);border:1px solid rgba(184,246,58,.2);border-radius:8px;'+
+      'padding:12px;cursor:pointer;font-size:13px;font-weight:700;color:var(--lime);width:100%;box-sizing:border-box">'+
+      '<i class="ti ti-camera" style="font-size:16px"></i> Subir foto de perfil'+
+      '<input type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/heic,image/heif" '+
+      'style="position:absolute;opacity:0;width:1px;height:1px" id="photo-file-inp">'+
+      '</label>';
     var preview = m2.querySelector('#avatar-preview');
-    // Insert photo button BEFORE the preview circle
     if(preview) preview.parentNode.insertBefore(photoDiv, preview);
-    else m2.querySelector('.modal').insertBefore(photoDiv, m2.querySelector('.modal').firstChild.nextSibling);
-    // Auto-save when photo selected
-    photoInp.onchange = function(){
-      cargarFotoAvatar(this, name);
-      setTimeout(function(){ guardarAvatar(); }, 300);
-    };
-  }, 50);
+    else m2.querySelector('.modal').insertBefore(photoDiv, m2.querySelector('h2').nextSibling);
+    // Wire change event
+    var inp = document.getElementById('photo-file-inp');
+    if(inp){
+      inp.addEventListener('change', function(){
+        if(!this.files || !this.files[0]) return;
+        cargarFotoAvatar(this, name);
+        setTimeout(function(){ guardarAvatar(); }, 500);
+      });
+    }
+  }, 100);
 }
 
 let _pendingAvatar = null;
@@ -5779,17 +5799,29 @@ function guardarAvatar(){
     delete j.avatarPhoto;
   }
   saveCloud().then(function(){
+    // Re-render EVERYWHERE the avatar appears
     recalcJugadoresFromHistorial();
-    renderJugadoresEnhanced();
-    renderInicioMulti();
-    renderJugadoresRanking();
-    if(document.getElementById('sc-perfil')&&document.getElementById('sc-perfil').classList.contains('active')){
+    renderJugadoresEnhanced();       // Jugadores grid
+    renderJugadoresRanking();        // Estadísticas ranking
+    renderInicioMulti();             // Inicio - lista convocatoria
+    renderHistorialEnhanced();       // Historial - jugadores en partidos
+    renderDashboard();               // Dashboard - top goleador
+    // Perfil screen
+    var perfilScreen = document.getElementById('sc-perfil');
+    if(perfilScreen && perfilScreen.classList.contains('active')){
       var _k2=(_avatarPickerTarget||'').trim().toLowerCase();
       if(jugadores[_k2]) renderPerfil(jugadores[_k2]);
     }
-    showToast('✓ Avatar guardado correctamente');
+    // Org jugadores if open
+    if(typeof renderOrgJug === 'function'){
+      var orgJug = document.getElementById('org-jug-section');
+      if(orgJug && orgJug.innerHTML.length > 10) renderOrgJug();
+    }
+    // Campo equipos if open
+    if(typeof refreshCampoIfOpen === 'function') refreshCampoIfOpen();
+    showToast('✓ Avatar actualizado en toda la app');
     _pendingAvatar=null;
-  }).catch(function(e){ console.error(e); showToast('Error al guardar el avatar: '+e.message); });
+  }).catch(function(e){ console.error(e); showToast('Error: '+e.message); });
   closeModal('modal-avatar-picker');
 }
 
@@ -7913,26 +7945,30 @@ async function activarNotifConNombre(){
 function cargarFotoAvatar(input, nombre){
   var file = input.files[0];
   if(!file) return;
-  if(file.size > 2*1024*1024){ showToast('Imagen muy grande (máx 2MB)'); return; }
+  // Resize large images before saving
+  // Accept all sizes - will compress if needed
   var reader = new FileReader();
   reader.onload = function(e){
-    var dataUrl = e.target.result;
-    // Show preview in picker
-    var prev = document.getElementById('avatar-preview');
-    if(prev){
-      prev.style.background = '#000';
-      prev.style.backgroundImage = 'url('+dataUrl+')';
-      prev.style.backgroundSize = 'cover';
-      prev.style.backgroundPosition = 'center';
-      prev.textContent = '';
-    }
-    _pendingAvatar = {type:'photo', val:dataUrl};
-    // Update preview circle in picker
-    var prev2 = document.getElementById('avatar-preview');
-    if(prev2){
-      prev2.style.cssText = 'width:72px;height:72px;border-radius:50%;background:url('+dataUrl+') center/cover no-repeat;border:3px solid rgba(0,0,0,.1)';
-      prev2.textContent = '';
-    }
+    // Compress image to max 400px for Supabase storage
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var MAX = 400;
+      var w = img.width, h = img.height;
+      if(w > h){ if(w>MAX){h=Math.round(h*MAX/w);w=MAX;} }
+      else { if(h>MAX){w=Math.round(w*MAX/h);h=MAX;} }
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      _pendingAvatar = {type:'photo', val:dataUrl};
+      // Update preview
+      var prev = document.getElementById('avatar-preview');
+      if(prev){
+        prev.style.cssText = 'width:72px;height:72px;border-radius:50%;background:url('+dataUrl+') center/cover no-repeat;border:3px solid rgba(0,0,0,.1)';
+        prev.textContent='';
+      }
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -8417,7 +8453,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 11:36:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 11:49:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
