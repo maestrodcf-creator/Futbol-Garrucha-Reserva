@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 12:23 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 12:11 -->
 
 
 <html lang="es">
@@ -701,7 +701,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 12:23</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 12:11</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -804,6 +804,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
     </div>
 
     <div id="sc-perfil" class="screen">
+      <div id="perfil-session-bar" style="display:none;background:rgba(34,136,61,.1);border-bottom:1px solid rgba(34,136,61,.2);padding:8px 16px;font-size:12px;font-weight:600;color:var(--grass);text-align:center">✓ Sesión activa como David</div>
       <div class="sec-pad" style="padding-top:16px">
         <div id="perfil-content"></div>
       </div>
@@ -2968,11 +2969,6 @@ function renderHistorialEnhanced(){
   }
 
   if(!historial.length){
-    if(!_dataReady){
-      el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Cargando...</div>';
-      setTimeout(function(){renderHistorialEnhanced();},1000);
-      return;
-    }
     el.innerHTML='<div class="empty-st"><i class="ti ti-history"></i><p>Aún no hay partidos en el historial</p></div>';
     return;
   }
@@ -3476,6 +3472,13 @@ function abrirPerfil(name){
 function renderPerfil(j){
   const el=document.getElementById('perfil-content');
   if(!el)return;
+  // Session bar
+  var sessBar=document.getElementById('perfil-session-bar');
+  if(sessBar){
+    var isMe=_myName&&_myName.trim().toLowerCase()===j.name.trim().toLowerCase();
+    sessBar.style.display=isMe?'block':'none';
+    sessBar.textContent='\u2713 Sesi\u00f3n activa como '+j.name;
+  }
 
   const partidos=j.partidos||0;
   const ganados=j.ganados||0;
@@ -3603,7 +3606,7 @@ function renderPerfil(j){
   var sessBtn=document.createElement('button');
   sessBtn.className='session-btn';
   var isMe2=_myName&&_myName.trim().toLowerCase()===j.name.trim().toLowerCase();
-  var _myN=_myName||'';sessBtn.textContent=isMe2?'\u2713 Activo como '+(_myName||j.name):'Iniciar sesi\u00f3n como '+j.name;
+  var _myN=_myName||'';sessBtn.textContent=isMe2?'\u2713 Activo como '+(_myN||j.name):'Iniciar sesi\u00f3n como '+j.name;
   sessBtn.style.cssText='width:100%;padding:10px;font-size:12px;font-weight:700;border-radius:var(--r-sm);cursor:pointer;margin-bottom:8px;font-family:DM Sans,sans-serif;border:1px solid '+(isMe2?'rgba(34,136,61,.4)':'rgba(184,246,58,.2)')+';background:'+(isMe2?'rgba(34,136,61,.1)':'rgba(184,246,58,.05)')+';color:'+(isMe2?'var(--grass)':'var(--lime)');
 
 
@@ -8483,7 +8486,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 12:23:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 12:11:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
