@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 16:25 -->
+<!-- Peña Garrucha v4.3 - 14/06/2026 16:40 -->
 
 
 <html lang="es">
@@ -703,7 +703,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 16:25</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.3 - 14/06/2026 16:40</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -1763,10 +1763,13 @@ async function loadCloud(){
     // ONE request to load all keys at once — much faster than 11 separate requests
     const keys=['convocatorias','jugadores','historial','plantillas','pagos',
                  'pin','listaNegra','borradores','cartera','temporadas','pushSubs'];
-    const {data,error}=await sb.from('app_data')
-      .select('key,value')
-      .in('key',keys);
-    if(error) throw error;
+    var data=null;
+    for(var _try=1;_try<=3;_try++){
+      var _r=await sb.from('app_data').select('key,value').in('key',keys);
+      if(!_r.error){data=_r.data;break;}
+      if(_try<3)await new Promise(function(r){setTimeout(r,600*_try);});
+    }
+    if(!data)throw new Error('load failed');
 
     // Parse all results
     const map={};
@@ -8106,27 +8109,34 @@ window.addEventListener('load',function(){
   patchConfirmarInsc();
   setTimeout(hideSplash,6000);
   loadCloud().then(function(){
-    // Data loaded — render everything once
-    recalcJugadoresFromHistorial();
-    syncCalFromConvs();
-    renderInicioMulti();
-    _renderInicioButtons();
-    renderJugadoresEnhanced();
-    renderHistorialEnhanced();
-    renderDashboard();
-    renderJugadoresRanking();
+    function sp(p,t){var b=document.getElementById('splash-bar'),s=document.getElementById('splash-status');if(b)b.style.width=p+'%';if(s&&t)s.textContent=t;}
+    sp(82,'Calculando...'); recalcJugadoresFromHistorial(); syncCalFromConvs();
+    sp(86,'Inicio...'); renderInicioMulti(); _renderInicioButtons();
+    sp(89,'Jugadores...'); renderJugadoresEnhanced();
+    sp(92,'Historial...'); renderHistorialEnhanced();
+    sp(95,'Estadísticas...'); renderDashboard(); renderJugadoresRanking();
+    sp(98,'Finalizando...');
     if(typeof renderCalendar==='function') renderCalendar();
     if(typeof updateSidebarConv==='function') updateSidebarConv();
-    populateDL();
-    _dataReady=true;
-    hideSplash();
-    // Start background services
-    startTimerTick();
-    startRealtime();
+    populateDL(); _dataReady=true; sp(100,'¡Listo!');
+    setTimeout(function(){ hideSplash(); startTimerTick(); startRealtime(); },350);
   }).catch(function(e){
-    console.error('loadCloud error:',e);
-    _dataReady=true;
-    hideSplash();
+    console.error('Boot error:',e);
+    var s=document.getElementById('splash-status');
+    if(s)s.textContent='Reintentando...';
+    setTimeout(function(){
+      loadCloud().then(function(){
+        recalcJugadoresFromHistorial();syncCalFromConvs();
+        renderInicioMulti();_renderInicioButtons();
+        renderJugadoresEnhanced();renderHistorialEnhanced();
+        renderDashboard();renderJugadoresRanking();
+        if(typeof renderCalendar==='function')renderCalendar();
+        populateDL();_dataReady=true;
+        hideSplash();startTimerTick();startRealtime();
+      }).catch(function(){
+        _dataReady=true;hideSplash();startTimerTick();startRealtime();
+      });
+    },1500);
   });
 });
 
@@ -8545,8 +8555,8 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
     keys.forEach(function(k){ caches.delete(k); });
   });
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=43')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 16:25:',reg.scope);})
+    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=45')
+      .then(function(reg){console.log('SW v4.3 - 14/06/2026 16:40:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
