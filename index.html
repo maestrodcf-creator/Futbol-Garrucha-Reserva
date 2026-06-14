@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 12:47 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 16:25 -->
 
 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+  <link rel="preconnect" href="https://xayabgxqybiofqfyvgpv.supabase.co">
+  <link rel="dns-prefetch" href="https://xayabgxqybiofqfyvgpv.supabase.co">
   <script>
     // Force cache clear v4.0
     if('serviceWorker' in navigator){
@@ -701,7 +703,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 12:47</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 16:25</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -1756,30 +1758,51 @@ async function saveCloud(){
 }
 async function loadCloud(){
   const ss=document.getElementById('splash-status');
-  if(ss)ss.textContent='Conectando...';
-  const [convs,jug,hist,plts,pgs,savedPin,ln,bdrs,ct,tmpds,psubs]=await Promise.all([
-    sbLoad('convocatorias'),sbLoad('jugadores'),sbLoad('historial'),
-    sbLoad('plantillas'),sbLoad('pagos'),sbLoad('pin'),sbLoad('listaNegra'),
-    sbLoad('borradores'),sbLoad('cartera'),sbLoad('temporadas'),sbLoad('pushSubs'),
-  ]);
-  if(convs){convocatorias=convs;}
-  if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
-  if(hist){historial.length=0;hist.forEach(h=>historial.push(h));}
-  if(plts){plantillas=plts;}
-  if(pgs){Object.keys(pagos).forEach(k=>delete pagos[k]);Object.assign(pagos,pgs);}
-  if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
-  if(ln&&Array.isArray(ln)){listaNegra=ln;}
-  if(bdrs&&Array.isArray(bdrs)){borradores=bdrs;}
-  if(ct&&typeof ct.bote==='number'){cartera=ct;}
-  if(tmpds&&Array.isArray(tmpds)){temporadas=tmpds;}
-  if(psubs&&Array.isArray(psubs)){pushSubs=psubs;}
-  // Re-schedule any pending auto-publishes
-  borradores.filter(b=>b.status==='programado'&&b.publicarAt).forEach(b=>{
-    const diff=new Date(b.publicarAt)-new Date();
-    if(diff>0)setTimeout(function(){_publicarBorrador(b.id);},diff);
-    else if(diff>-300000)_publicarBorrador(b.id); // within 5min past = publish now
-  });
-  if(ss)ss.textContent='Listo ✓';
+  if(ss)ss.textContent='Cargando...';
+  try{
+    // ONE request to load all keys at once — much faster than 11 separate requests
+    const keys=['convocatorias','jugadores','historial','plantillas','pagos',
+                 'pin','listaNegra','borradores','cartera','temporadas','pushSubs'];
+    const {data,error}=await sb.from('app_data')
+      .select('key,value')
+      .in('key',keys);
+    if(error) throw error;
+
+    // Parse all results
+    const map={};
+    (data||[]).forEach(function(row){
+      try{ map[row.key]=JSON.parse(row.value); }catch(e){ map[row.key]=null; }
+    });
+
+    const convs=map['convocatorias'],jug=map['jugadores'],hist=map['historial'];
+    const plts=map['plantillas'],pgs=map['pagos'],savedPin=map['pin'];
+    const ln=map['listaNegra'],bdrs=map['borradores'],ct=map['cartera'];
+    const tmpds=map['temporadas'],psubs=map['pushSubs'];
+
+    if(convs){convocatorias=convs;}
+    if(jug){Object.keys(jugadores).forEach(k=>delete jugadores[k]);Object.assign(jugadores,jug);}
+    if(hist){historial.length=0;hist.forEach(h=>historial.push(h));}
+    if(plts){plantillas=plts;}
+    if(pgs){Object.keys(pagos).forEach(k=>delete pagos[k]);Object.assign(pagos,pgs);}
+    if(savedPin&&typeof savedPin==='string'&&/^\d{4}$/.test(savedPin)){PIN=savedPin;}
+    if(ln&&Array.isArray(ln)){listaNegra=ln;}
+    if(bdrs&&Array.isArray(bdrs)){borradores=bdrs;}
+    if(ct&&typeof ct.bote==='number'){cartera=ct;}
+    if(tmpds&&Array.isArray(tmpds)){temporadas=tmpds;}
+    if(psubs&&Array.isArray(psubs)){pushSubs=psubs;}
+
+    // Re-schedule pending auto-publishes
+    borradores.filter(b=>b.status==='programado'&&b.publicarAt).forEach(b=>{
+      const diff=new Date(b.publicarAt)-new Date();
+      if(diff>0)setTimeout(function(){_publicarBorrador(b.id);},diff);
+      else if(diff>-300000)_publicarBorrador(b.id);
+    });
+    if(ss)ss.textContent='Listo ✓';
+  }catch(e){
+    console.error('loadCloud error:',e);
+    if(ss)ss.textContent='Error de conexión';
+    throw e;
+  }
 }
 function startRealtime(){
   sb.channel('pg').on('postgres_changes',{event:'*',schema:'public',table:'app_data'},p=>{
@@ -8083,21 +8106,7 @@ window.addEventListener('load',function(){
   patchConfirmarInsc();
   setTimeout(hideSplash,6000);
   loadCloud().then(function(){
-    recalcJugadoresFromHistorial();
-    syncCalFromConvs();
-    renderInicioMulti();
-    renderJugadoresEnhanced();
-    renderHistorialEnhanced();
-    renderDashboard();
-    renderJugadoresRanking();
-    if(typeof renderCalendar==='function')renderCalendar();
-    if(typeof updateSidebarConv==='function')updateSidebarConv();
-    populateDL();
-    startTimerTick();
-    startRealtime();
-    _dataReady=true;
-    hideSplash();
-    // Re-render everything with fresh data
+    // Data loaded — render everything once
     recalcJugadoresFromHistorial();
     syncCalFromConvs();
     renderInicioMulti();
@@ -8107,6 +8116,13 @@ window.addEventListener('load',function(){
     renderDashboard();
     renderJugadoresRanking();
     if(typeof renderCalendar==='function') renderCalendar();
+    if(typeof updateSidebarConv==='function') updateSidebarConv();
+    populateDL();
+    _dataReady=true;
+    hideSplash();
+    // Start background services
+    startTimerTick();
+    startRealtime();
   }).catch(function(e){
     console.error('loadCloud error:',e);
     _dataReady=true;
@@ -8529,8 +8545,8 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
     keys.forEach(function(k){ caches.delete(k); });
   });
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 12:47:',reg.scope);})
+    navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=43')
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 16:25:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
