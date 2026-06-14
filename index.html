@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 06:41 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 08:45 -->
 
 
 <html lang="es">
@@ -533,7 +533,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
         <div class="mh-sub">Fútbol · Convocatorias</div>
       </div>
     
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center"><button id="btn-instalar-app-mob" onclick="pwaInstalar()" style="display:none;border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.08);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-device-mobile-down" style="font-size:13px"></i> Instalar app</button><button onclick="mostrarModalActivarNotif()" style="border:1px solid rgba(184,246,58,.2);background:rgba(184,246,58,.05);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificaciones</button></div>
+    <div id="mh-btn-row" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center"><button id="btn-instalar-app-mob" onclick="pwaInstalar()" style="display:none;border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.08);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-device-mobile-down" style="font-size:13px"></i> Instalar app</button><button id="btn-notif-mob" onclick="mostrarModalActivarNotif()" style="border:1px solid rgba(184,246,58,.25);background:rgba(184,246,58,.07);border-radius:99px;padding:6px 16px;cursor:pointer;font-size:11px;font-weight:700;color:var(--lime);display:inline-flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificaciones</button></div>
   </div>
     <div id="mh-conv-area"><div class="mh-no-conv"><p>Sin convocatoria activa</p></div></div>
   </div>
@@ -562,9 +562,6 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
 
         <!-- 2. Botón: Próximas convocatorias -->
         <div id="proximas-section"></div>
-
-        <!-- 2b. Botón: Activar notificaciones -->
-        <div id="btn-notif-inicio"></div>
 
         <!-- 3. Botón: Partidos de la temporada -->
         <div id="btn-temporada-inicio"></div>
@@ -704,7 +701,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 06:41</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 08:45</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -2025,6 +2022,21 @@ function renderInicioMulti(){
     var b=document.getElementById(id);
     if(b) b.style.display=showInstall?'inline-flex':'none';
   });
+  // Update notif button text based on permission state
+  var notifBtns=['btn-notif-mob','btn-instalar-app'];
+  var notifGranted='Notification' in window && Notification.permission==='granted';
+  var nbMob=document.getElementById('btn-notif-mob');
+  if(nbMob){
+    if(notifGranted){
+      nbMob.style.borderColor='rgba(34,136,61,.4)';
+      nbMob.style.background='rgba(34,136,61,.1)';
+      nbMob.innerHTML='<i class="ti ti-bell-ringing" style="font-size:13px"></i> Notificaciones activas';
+    } else {
+      nbMob.style.borderColor='rgba(184,246,58,.25)';
+      nbMob.style.background='rgba(184,246,58,.07)';
+      nbMob.innerHTML='<i class="ti ti-bell" style="font-size:13px"></i> Notificaciones';
+    }
+  }
 }
 
 function _renderInicioButtons(){
@@ -2052,27 +2064,6 @@ function _renderInicioButtons(){
       prox.innerHTML='';
     }
   }
-  // 2. Notificaciones button
-  var notifWrap=document.getElementById('btn-notif-inicio');
-  if(notifWrap){
-    var yaActivado=('Notification' in window)&&Notification.permission==='granted';
-    var isStandalone3=window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone;
-    notifWrap.innerHTML=
-      '<button onclick="mostrarModalActivarNotif()" style="width:100%;display:flex;align-items:center;gap:12px;'+
-      'background:var(--pitch);border:1px solid '+(yaActivado?'rgba(34,136,61,.4)':'rgba(184,246,58,.2)')+';'+
-      'border-radius:var(--r-md);padding:12px 16px;cursor:pointer;margin-top:8px;font-family:\'DM Sans\',sans-serif;text-align:left">'+
-      '<div style="width:38px;height:38px;border-radius:50%;background:'+(yaActivado?'rgba(34,136,61,.15)':'rgba(184,246,58,.08)')+
-        ';display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-        '<i class="ti ti-bell'+(yaActivado?'-ringing':'')+'" style="font-size:18px;color:'+(yaActivado?'var(--grass)':'var(--lime)')+'"></i>'+
-      '</div>'+
-      '<div style="flex:1">'+
-        '<div style="font-size:13px;font-weight:700;color:var(--dark)">'+(yaActivado?'✓ Notificaciones activadas':'🔔 Activar notificaciones')+'</div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:1px">'+(yaActivado?'Recibirás avisos de convocatorias':'Avísate cuando abran nuevas convocatorias')+'</div>'+
-      '</div>'+
-      '<i class="ti ti-chevron-right" style="font-size:16px;color:var(--muted)"></i>'+
-    '</button>';
-  }
-
   // 3. Temporada button
   var tempWrap=document.getElementById('btn-temporada-inicio');
   if(tempWrap){
@@ -3519,7 +3510,8 @@ function renderPerfil(j){
   }).join('');
 
   el.innerHTML=`
-    <button onclick="showScreen('jugadores',document.querySelector('[data-screen=jugadores]'))"
+    '<button onclick="_myName=j.name;localStorage.setItem(\'pg_myname\',j.name);showToast(\'✓ Sesión iniciada como \'+j.name);renderPerfil(j)" style="width:100%;border:1px solid rgba(184,246,58,.2);background:rgba(184,246,58,.05);border-radius:var(--r-sm);padding:10px;font-size:12px;font-weight:700;color:var(--lime);cursor:pointer;margin-bottom:8px;font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-user-check" style="font-size:13px"></i> '+(_myName===j.name?'✓ Sesión activa como '+j.name:'Iniciar sesión como '+j.name)+'</button>'+
+    '<button onclick="showScreen(\'jugadores\',document.querySelector(\'[data-screen=jugadores]\'))"
       style="display:inline-flex;align-items:center;gap:6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;padding:0 0 14px;font-family:'DM Sans',sans-serif">
       <i class="ti ti-arrow-left" style="font-size:16px"></i> Jugadores
     </button>
@@ -5578,8 +5570,18 @@ function convFechaCompleta(c){
 }
 
 /* ===== AVATARES ===== */
-const AVATARES = ['⚽','🥅','🧤','👟','🦵','🏃','💪','🌟','🔥','⚡','🦅','🐆'];
-const AVATAR_COLORS = ['#22883d','#0C447C','#8B0000','#4B0082','#B8860B','#1a6666','#883200','#444444'];
+const AVATARES = [
+  '⚽','🥅','🧤','👟','🦵','🏃','💪','🌟','🔥','⚡',
+  '🦅','🐆','🦁','🐯','🐺','🦊','🐻','🐼','🐸','🦎',
+  '🦈','🐬','🦋','🐉','🦄','🎯','🏆','🥇','🎮','🎸',
+  '👑','💎','🚀','🌈','⚔️','🛡️','🧙','🦸','🤺','🥊',
+  '😎','🤩','😈','🧠','👀','🫀','🤜','✌️','🙌','🫵',
+  '🍀','🌊','🗻','🌙','☀️','⭐','🎭','🎪','🎲','♟️'
+];
+const AVATAR_COLORS = [
+  '#22883d','#0C447C','#8B0000','#4B0082','#B8860B','#1a6666','#883200','#444444',
+  '#c0392b','#e67e22','#f1c40f','#1abc9c','#3498db','#9b59b6','#e91e63','#607d8b'
+];
 
 function getAvatar(name){
   const k=name.trim().toLowerCase();
@@ -5592,6 +5594,9 @@ function getAvatar(name){
 function renderAvatarCircle(name, size=42, fontSize=13){
   const av=getAvatar(name);
   const base=`width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+  if(av.type==='photo'){
+    return `<div style="${base}background:url(${av.val}) center/cover no-repeat;overflow:hidden"></div>`;
+  }
   if(av.type==='emoji'){
     return `<div style="${base}background:rgba(0,0,0,.08);font-size:${Math.round(size*.5)}px">${av.val}</div>`;
   }
@@ -5602,6 +5607,12 @@ function renderAvatarCircle(name, size=42, fontSize=13){
 let _avatarPickerTarget = null;
 
 function abrirAvatarPicker(name){
+  var myName = (_myName||'').trim().toLowerCase();
+  var targetName = (name||'').trim().toLowerCase();
+  if(myName && myName !== targetName && !pinUnlocked){
+    showToast('Solo puedes editar tu propio avatar');
+    return;
+  }
   _avatarPickerTarget = name;
   const k = name.trim().toLowerCase();
   const j = jugadores[k];
@@ -5632,7 +5643,13 @@ function abrirAvatarPicker(name){
     '</div>'+
 
     // Emoji grid
+    // Emoji grid
+
+
+
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Elige un emoji</div>'+
+
+
     '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px">'+
       AVATARES.map(em=>
         '<button onclick="selectAvatarEmoji(\''+em+'\')" style="'+
@@ -5660,6 +5677,24 @@ function abrirAvatarPicker(name){
     '</div>';
 
   openModal('modal-avatar-picker');
+  // Inject photo upload button after modal renders
+  setTimeout(function(){
+    var m2 = document.getElementById('modal-avatar-picker');
+    if(!m2) return;
+    var photoDiv = document.createElement('div');
+    photoDiv.style.cssText = 'margin-bottom:14px';
+    var photoLbl = document.createElement('label');
+    photoLbl.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(184,246,58,.06);border:1px solid rgba(184,246,58,.2);border-radius:8px;padding:11px;cursor:pointer;font-size:13px;font-weight:700;color:var(--lime)';
+    photoLbl.innerHTML = '<i class="ti ti-camera" style="font-size:16px"></i> Subir foto de perfil';
+    var photoInp = document.createElement('input');
+    photoInp.type='file'; photoInp.accept='image/*'; photoInp.style.display='none';
+    photoInp.onchange = function(){ cargarFotoAvatar(this, name); };
+    photoLbl.appendChild(photoInp);
+    photoDiv.appendChild(photoLbl);
+    var preview = m2.querySelector('#avatar-preview');
+    if(preview) preview.parentNode.insertBefore(photoDiv, preview.nextSibling);
+    else m2.querySelector('.modal').insertBefore(photoDiv, m2.querySelector('.modal').firstChild.nextSibling);
+  }, 50);
 }
 
 let _pendingAvatar = null;
@@ -5726,13 +5761,24 @@ function guardarAvatar(){
   if(_pendingAvatar.type==='emoji'){
     j.avatarEmoji=_pendingAvatar.val;
     delete j.avatarColor;
+    delete j.avatarPhoto;
+  } else if(_pendingAvatar.type==='photo'){
+    j.avatarPhoto=_pendingAvatar.val;
+    delete j.avatarEmoji;
+    delete j.avatarColor;
   } else {
     j.avatarColor=_pendingAvatar.val;
     delete j.avatarEmoji;
+    delete j.avatarPhoto;
   }
-  saveCloud();
+  saveCloud().then(function(){
+    renderJugadoresEnhanced();
+    if(document.getElementById('sc-perfil')&&document.getElementById('sc-perfil').classList.contains('active')){
+      var _k2=(_avatarPickerTarget||'').trim().toLowerCase();
+      if(jugadores[_k2]) renderPerfil(jugadores[_k2]);
+    }
+  });
   closeModal('modal-avatar-picker');
-  renderJugadoresEnhanced();
   // Re-render perfil if open
   if(document.getElementById('sc-perfil')&&document.getElementById('sc-perfil').classList.contains('active')){
     renderPerfil(jugadores[k]);
@@ -7144,6 +7190,13 @@ function abrirFifaCard(nombre){
 }
 
 function editarFifaCard(nombre){
+  // Only allow editing own card OR if org (pinUnlocked)
+  var myName = (_myName||'').trim().toLowerCase();
+  var targetName = (nombre||'').trim().toLowerCase();
+  if(myName && myName !== targetName && !pinUnlocked){
+    showToast('Solo puedes editar tu propia carta FIFA');
+    return;
+  }
   var _jk2 = nombre.trim().toLowerCase();
   var j = jugadores[_jk2]||jugadores[nombre]||{};
   var ratings = j.ratings||{};
@@ -7293,7 +7346,7 @@ function _enviarNotifConvocatoria(c){
 
   // 2. Server push via Supabase Edge Function (works when app is closed)
   if(pushSubs&&pushSubs.length){
-    fetch('https://xayabgxqybiofqfyvgpv.supabase.co/functions/v1/send-push', {
+    fetch('https://xayabgxqybiofqfyvgpv.supabase.co/functions/v1/clever-processor', {
       method: 'POST',
       headers: {'Content-Type':'application/json',
         'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhheWFiZ3hxeWJpb2ZxZnl2Z3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDY2NDgsImV4cCI6MjA5NTQ4MjY0OH0.8dSmB9WVf6zjzHv1GjyR4hhrQeX4eYPfZc3-QesOmc0'},
@@ -7307,7 +7360,7 @@ function _enviarNotifConvocatoria(c){
 // Manual push for testing or announcements
 function enviarNotifManual(title, body2){
   if(pushSubs&&pushSubs.length){
-    fetch('https://xayabgxqybiofqfyvgpv.supabase.co/functions/v1/send-push', {
+    fetch('https://xayabgxqybiofqfyvgpv.supabase.co/functions/v1/clever-processor', {
       method: 'POST',
       headers: {'Content-Type':'application/json',
         'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhheWFiZ3hxeWJpb2ZxZnl2Z3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDY2NDgsImV4cCI6MjA5NTQ4MjY0OH0.8dSmB9WVf6zjzHv1GjyR4hhrQeX4eYPfZc3-QesOmc0'},
@@ -7846,6 +7899,27 @@ async function activarNotifConNombre(){
   renderInicioMulti();
 }
 
+function cargarFotoAvatar(input, nombre){
+  var file = input.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){ showToast('Imagen muy grande (máx 2MB)'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var dataUrl = e.target.result;
+    // Show preview in picker
+    var prev = document.getElementById('avatar-preview');
+    if(prev){
+      prev.style.background = '#000';
+      prev.style.backgroundImage = 'url('+dataUrl+')';
+      prev.style.backgroundSize = 'cover';
+      prev.style.backgroundPosition = 'center';
+      prev.textContent = '';
+    }
+    _pendingAvatar = {type:'photo', val:dataUrl};
+  };
+  reader.readAsDataURL(file);
+}
+
 /* ===== CSS ===== */
 (function(){
   const s=document.createElement('style');
@@ -8323,7 +8397,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 06:41:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 08:45:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
