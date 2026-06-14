@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 12:36 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 12:47 -->
 
 
 <html lang="es">
@@ -701,7 +701,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 12:36</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 12:47</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -2069,8 +2069,11 @@ function _renderInicioButtons(){
   var tempWrap=document.getElementById('btn-temporada-inicio');
   if(tempWrap){
     var nP=historial.filter(function(h){return h.estado==='jugado';}).length;
-    // If no data yet, re-render when ready
-    if(!nP&&!_dataReady)setTimeout(function(){if(historial.length)_renderInicioButtons();},1500);
+    // If historial empty, get count from jugadores
+    if(!nP){
+      var _jv=Object.values(jugadores).filter(function(j){return j&&(j.partidos||0)>0;});
+      if(_jv.length) nP=Math.max.apply(null,_jv.map(function(j){return j.partidos||0;}));
+    }
     tempWrap.innerHTML=
       '<button onclick="toggleTemporadaDetalle()" id="btn-temporada-toggle" '+
         'style="width:100%;display:flex;align-items:center;justify-content:space-between;'+
@@ -2976,6 +2979,26 @@ function renderHistorialEnhanced(){
       setTimeout(function(){renderHistorialEnhanced();},1000);
       return;
     }
+    // Historial vacío pero jugadores tienen datos — mostrar stats disponibles
+    var jvals=Object.values(jugadores).filter(function(j){return j&&j.name&&(j.partidos||0)>0;});
+    if(jvals.length){
+      var totalP=jvals.reduce(function(s,j){return Math.max(s,j.partidos||0);},0);
+      el.innerHTML='<div class="card" style="padding:16px;margin-bottom:12px;border:1px solid rgba(184,246,58,.2)">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--lime);margin-bottom:6px">📊 Datos de la temporada</div>'+
+        '<div style="font-size:12px;color:var(--muted)">El historial detallado de partidos no está disponible, '+
+        'pero los registros de jugadores muestran que se han jugado partidos esta temporada.</div>'+
+      '</div>'+
+      jvals.sort(function(a,b){return (b.goles||0)-(a.goles||0);}).map(function(j){
+        var pct=j.partidos?Math.round((j.ganados||0)/j.partidos*100):0;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+          renderAvatarCircle(j.name,32,11)+
+          '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--dark)">'+j.name+'</div>'+
+          '<div style="font-size:10px;color:var(--muted)">'+j.partidos+' partidos · '+j.ganados+' victorias · '+pct+'%</div></div>'+
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--grass)">'+j.goles+'⚽</div>'+
+        '</div>';
+      }).join('');
+      return;
+    }
     el.innerHTML='<div class="empty-st"><i class="ti ti-history"></i><p>Aún no hay partidos en el historial</p></div>';
     return;
   }
@@ -3634,10 +3657,14 @@ function renderDashboard(){
   var el=document.getElementById('dashboard-content');
   if(!el) return;
 
+  // Use jugadores data directly (historial may be empty but jugadores has stats)
   recalcJugadoresFromHistorial();
 
   var jugados=historial.filter(function(h){return h.estado==='jugado';});
   var nPartidos=jugados.length;
+  // If historial empty but jugadores have data, use jugadores stats
+  var jvalsCheck=Object.values(jugadores).filter(function(j){return j&&j.name&&(j.partidos||0)>0;});
+  if(!nPartidos&&jvalsCheck.length) nPartidos=Math.max.apply(null,jvalsCheck.map(function(j){return j.partidos||0;}));
   var nJugadores=Object.keys(jugadores).length;
 
   if(!nPartidos && !_dataReady){
@@ -8503,7 +8530,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 12:36:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 12:47:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
