@@ -1,5 +1,5 @@
 // Peña Garrucha SW v4.2 — Push + Cache
-const CACHE = 'pena-garrucha-v4-2';
+const CACHE = 'pena-garrucha-v4-4';
 const BASE  = 'https://maestrodcf-creator.github.io/Futbol-Garrucha-Reserva';
 
 self.addEventListener('install', e=>{
@@ -22,18 +22,32 @@ self.addEventListener('activate', e=>{
 
 self.addEventListener('fetch', e=>{
   const url = e.request.url;
-  if(url.includes('supabase')||url.includes('index.html')||
-     url.endsWith('/Futbol-Garrucha-Reserva')||url.endsWith('/Futbol-Garrucha-Reserva/')){
+  // Supabase API — always network, never cache
+  if(url.includes('supabase')){
+    e.respondWith(fetch(e.request).catch(()=>new Response('{}',{headers:{'Content-Type':'application/json'}})));
+    return;
+  }
+  // App shell (HTML, icons, fonts) — cache first, update in background
+  if(url.endsWith('/Futbol-Garrucha-Reserva')||url.endsWith('/Futbol-Garrucha-Reserva/')||url.includes('index.html')){
     e.respondWith(
-      fetch(e.request,{cache:'no-store'}).then(r=>{
-        const clone=r.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,clone));
-        return r;
-      }).catch(()=>caches.match(e.request))
+      caches.open(CACHE).then(function(cache){
+        return cache.match(e.request).then(function(cached){
+          var fetchPromise=fetch(e.request).then(function(network){
+            cache.put(e.request,network.clone());
+            return network;
+          });
+          // Return cached immediately if available, update in background
+          return cached||fetchPromise;
+        });
+      })
     );
     return;
   }
-  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+  // Everything else — cache first
+  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(function(r){
+    if(r.ok) caches.open(CACHE).then(c=>c.put(e.request,r.clone()));
+    return r;
+  })));
 });
 
 self.addEventListener('push', e=>{
