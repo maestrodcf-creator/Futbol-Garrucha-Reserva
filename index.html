@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.2 - 14/06/2026 11:29 -->
+<!-- Peña Garrucha v4.2 - 14/06/2026 11:36 -->
 
 
 <html lang="es">
@@ -701,7 +701,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 11:29</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.2 - 14/06/2026 11:36</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -5693,8 +5693,14 @@ function abrirAvatarPicker(name){
     photoLbl.appendChild(photoInp);
     photoDiv.appendChild(photoLbl);
     var preview = m2.querySelector('#avatar-preview');
-    if(preview) preview.parentNode.insertBefore(photoDiv, preview.nextSibling);
+    // Insert photo button BEFORE the preview circle
+    if(preview) preview.parentNode.insertBefore(photoDiv, preview);
     else m2.querySelector('.modal').insertBefore(photoDiv, m2.querySelector('.modal').firstChild.nextSibling);
+    // Auto-save when photo selected
+    photoInp.onchange = function(){
+      cargarFotoAvatar(this, name);
+      setTimeout(function(){ guardarAvatar(); }, 300);
+    };
   }, 50);
 }
 
@@ -5773,14 +5779,17 @@ function guardarAvatar(){
     delete j.avatarPhoto;
   }
   saveCloud().then(function(){
+    recalcJugadoresFromHistorial();
     renderJugadoresEnhanced();
+    renderInicioMulti();
+    renderJugadoresRanking();
     if(document.getElementById('sc-perfil')&&document.getElementById('sc-perfil').classList.contains('active')){
       var _k2=(_avatarPickerTarget||'').trim().toLowerCase();
       if(jugadores[_k2]) renderPerfil(jugadores[_k2]);
     }
-    showToast('✓ Avatar actualizado y guardado');
+    showToast('✓ Avatar guardado correctamente');
     _pendingAvatar=null;
-  }).catch(function(){ showToast('Error al guardar el avatar'); });
+  }).catch(function(e){ console.error(e); showToast('Error al guardar el avatar: '+e.message); });
   closeModal('modal-avatar-picker');
 }
 
@@ -7918,6 +7927,12 @@ function cargarFotoAvatar(input, nombre){
       prev.textContent = '';
     }
     _pendingAvatar = {type:'photo', val:dataUrl};
+    // Update preview circle in picker
+    var prev2 = document.getElementById('avatar-preview');
+    if(prev2){
+      prev2.style.cssText = 'width:72px;height:72px;border-radius:50%;background:url('+dataUrl+') center/cover no-repeat;border:3px solid rgba(0,0,0,.1)';
+      prev2.textContent = '';
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -7972,10 +7987,13 @@ window.addEventListener('load',function(){
     _dataReady=true;
     // Re-render everything with fresh data
     recalcJugadoresFromHistorial();
+    syncCalFromConvs();
+    renderInicioMulti();
+    renderJugadoresEnhanced();
     renderHistorialEnhanced();
     renderDashboard();
     renderJugadoresRanking();
-    renderJugadoresEnhanced();
+    if(typeof renderCalendar==='function') renderCalendar();
   }).catch(function(e){
     console.error('loadCloud error:',e);
     _dataReady=true;
@@ -8399,7 +8417,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=42')
-      .then(function(reg){console.log('SW v4.2 - 14/06/2026 11:29:',reg.scope);})
+      .then(function(reg){console.log('SW v4.2 - 14/06/2026 11:36:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
