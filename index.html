@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Peña Garrucha v4.3 - 15/06/2026 21:32 -->
+<!-- Peña Garrucha v4.3 - 16/06/2026 21:15 -->
 
 
 <html lang="es">
@@ -705,7 +705,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark)}
           <i class="ti ti-lock-open" style="font-size:15px;color:var(--grass)"></i>
         </div>
         <span style="font-weight:700;font-size:15px">Panel Organizador</span>
-        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.3 - 15/06/2026 21:32</span>
+        <span id="org-version-badge" style="font-size:9px;color:rgba(255,255,255,.2)">v4.3 - 16/06/2026 21:15</span>
       </div>
       <div style="display:flex;gap:6px">
         <button onclick="mostrarModalNotifManual()" style="border:1px solid rgba(184,246,58,.3);background:rgba(184,246,58,.06);border-radius:8px;cursor:pointer;padding:6px 10px;color:var(--lime);display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif"><i class="ti ti-bell" style="font-size:13px"></i> Notificar</button>
@@ -1006,7 +1006,27 @@ function getSup(){return players.filter(p=>p.rol==='sup')}
 /* ═══════════════════════
    JUGADORES REGISTRY
 ═══════════════════════ */
-function registrarJugador(name,pos,rol){/* no-op: stats saved via result only */}
+function registrarJugador(name,pos,rol){
+  // Ensure player exists in jugadores with ratings and avatar
+  var k=name.trim().toLowerCase();
+  if(!jugadores[k]){
+    jugadores[k]={
+      name:name,
+      partidos:0,ganados:0,perdidos:0,empatados:0,
+      goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,
+      posicion:pos||'',posiciones:{},
+      ratings:{},
+      avatarColor:null,avatarEmoji:null,avatarPhoto:null
+    };
+    // Save to Supabase so they appear everywhere
+    saveCloud(['jugadores']);
+  } else {
+    // Update posicion if not set
+    if(pos&&!jugadores[k].posicion) jugadores[k].posicion=pos;
+    // Ensure ratings exist
+    if(!jugadores[k].ratings) jugadores[k].ratings={};
+  }
+}
 
 function renderJugadores(){
   const el=document.getElementById('jugadores-list');
@@ -5713,8 +5733,16 @@ function recalcJugadoresFromHistorial(){
     const gan=sA>sB?'A':sB>sA?'B':'empate';
     tit.forEach(p=>{
       const k=p.name.trim().toLowerCase();
-      if(!calc[k]) calc[k]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,
-                             goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{}};
+      if(!calc[k]){
+        var _ex=jugadores[k]||{};
+        calc[k]={name:p.name,partidos:0,ganados:0,perdidos:0,empatados:0,
+                 goles:0,asistencias:0,amarillas:0,rojas:0,racha:0,posiciones:{},
+                 ratings:_ex.ratings||{},
+                 posicion:_ex.posicion||p.pos||'',
+                 avatarColor:_ex.avatarColor||null,
+                 avatarEmoji:_ex.avatarEmoji||null,
+                 avatarPhoto:_ex.avatarPhoto||null};
+      }
       const j=calc[k];
       j.name=p.name; j.partidos++;
       const enA=(h.teamA||[]).includes(p.name);
@@ -8630,7 +8658,7 @@ if('serviceWorker' in navigator && location.hostname === 'maestrodcf-creator.git
   });
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/Futbol-Garrucha-Reserva/sw.js?v=45')
-      .then(function(reg){console.log('SW v4.3 - 15/06/2026 21:32:',reg.scope);})
+      .then(function(reg){console.log('SW v4.3 - 16/06/2026 21:15:',reg.scope);})
       .catch(function(err){console.log('SW error:',err);});
   });
 }
