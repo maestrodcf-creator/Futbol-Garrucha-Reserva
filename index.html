@@ -1763,6 +1763,42 @@ let pushSubs=[];  // [{name, endpoint, keys}] push subscriptions
 
 async function sbSave(k,v){try{await sb.from('app_data').upsert({key:k,value:JSON.stringify(v)},{onConflict:'key'});}catch(e){console.warn('sbSave',k,e);}}
 async function sbLoad(k){try{const{data}=await sb.from('app_data').select('value').eq('key',k).maybeSingle();return data?JSON.parse(data.value):null;}catch(e){return null;}}
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA DE BACKUP AUTOMÁTICO — Peña Garrucha v4.3
+   Guarda una copia de seguridad en Supabase antes de cualquier
+   operación que modifique historial o jugadores.
+   Máximo 10 backups rotativos. Clave: 'backups'
+═══════════════════════════════════════════════════════════════ */
+const BACKUP_MAX = 10;
+
+async function crearBackup(motivo) {
+  try {
+    // Load existing backups
+    const existentes = await sbLoad('backups') || [];
+
+    // Build snapshot
+    const snap = {
+      id: 'bk_' + Date.now(),
+      fecha: new Date().toLocaleString('es-ES', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }),
+      motivo: motivo || 'manual',
+      historial: JSON.parse(JSON.stringify(historial)),
+      jugadores: JSON.parse(JSON.stringify(jugadores)),
+    };
+
+    // Rotate: keep only last BACKUP_MAX
+    const nuevos = [snap, ...existentes].slice(0, BACKUP_MAX);
+    await sbSave('backups', nuevos);
+    console.log('[Backup] Guardado:', snap.id, '—', motivo, '| Total:', nuevos.length);
+    return snap.id;
+  } catch(e) {
+    console.warn('[Backup] Error al crear backup:', e);
+    return null;
+  }
+}
+
 async function saveCloud(keys){
   // If specific keys given, save only those. Otherwise save all.
   var toSave = keys || ['convocatorias','jugadores','historial','plantillas',
@@ -5062,7 +5098,10 @@ function guardarEditarPartido(){
   Object.assign(jugadores, nuevoJugs);
 
   recalcJugadoresFromHistorial();
-  saveCloud();
+  // 🔒 BACKUP automático antes de guardar edición
+  crearBackup('editar_partido_idx' + idx).then(function(){
+    saveCloud();
+  });
   closeModal('modal-editar-partido');
   renderHistorialEnhanced();
   renderJugadoresEnhanced();
@@ -5221,7 +5260,10 @@ function confirmarRegistroManual(){
 
   recalcJugadoresFromHistorial();
 
-  saveCloud();
+  // 🔒 BACKUP automático antes de guardar
+  crearBackup('registro_manual_' + scA + ':' + scB).then(function(){
+    saveCloud();
+  });
   closeModal('modal-registro-manual');
   renderHistorialEnhanced();
   renderJugadoresEnhanced();
@@ -5705,6 +5747,9 @@ function confirmarRegistroPartido(){
 
   // Recalculate all jugadores stats from full historial
   recalcJugadoresFromHistorial();
+
+  // 🔒 BACKUP automático antes de guardar
+  await crearBackup('registro_partido_' + fecha + '_' + scA + ':' + scB);
 
   // Save to Supabase
   saveCloud(['historial','jugadores','convocatorias','cartera','pagos']);
