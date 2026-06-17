@@ -5667,7 +5667,7 @@ function abrirRegistroPartido(cid){
   openModal('modal-registro-partido');
 }
 
-function confirmarRegistroPartido(){
+async function confirmarRegistroPartido(){
   var cid = document.getElementById('rp-cid').value;
   var c   = convocatorias.find(function(x){return x.id===cid;});
   if(!c){ showToast('Error: convocatoria no encontrada'); return; }
